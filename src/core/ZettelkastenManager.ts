@@ -99,10 +99,12 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 获取卡片文件路径
+   * 获取卡片文件路径（支持嵌套目录）
    */
   private getCardFilePath(cardName: string): string {
-    const filePath = path.join(this.config.storageDir, `${cardName}.md`);
+    // 将 / 转换为系统路径分隔符，支持嵌套目录
+    const normalizedCardName = cardName.replace(/\//g, path.sep);
+    const filePath = path.join(this.config.storageDir, `${normalizedCardName}.md`);
     return path.normalize(filePath);
   }
 
@@ -393,15 +395,13 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 更新所有卡片中的引用
+   * 更新所有卡片中的引用（支持嵌套目录）
    */
   private async updateAllReferences(oldCardName: string, newCardName: string): Promise<void> {
     try {
-      const files = await fs.readdir(this.config.storageDir);
-      const mdFiles = files.filter((file: string) => file.endsWith('.md'));
+      const cardNames = await this.getAllCardNames();
 
-      for (const file of mdFiles) {
-        const cardName = path.basename(file, '.md');
+      for (const cardName of cardNames) {
         const card = await this.loadCardFromFile(cardName);
         
         if (card) {
@@ -427,20 +427,44 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 获取所有卡片名称
+   * 递归获取所有卡片名称（支持嵌套目录）
    */
   async getAllCardNames(): Promise<string[]> {
     try {
-      const files = await fs.readdir(this.config.storageDir);
-      return files
-        .filter((file: string) => file.endsWith('.md'))
-        .map((file: string) => path.basename(file, '.md'));
+      const cardNames: string[] = [];
+      await this.scanDirectory(this.config.storageDir, this.config.storageDir, cardNames);
+      return cardNames;
     } catch (error) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.STORAGE_ERROR,
         `Failed to get card names: ${error}`,
         error
       );
+    }
+  }
+
+  /**
+   * 递归扫描目录，收集所有 .md 文件
+   */
+  private async scanDirectory(
+    currentDir: string, 
+    baseDir: string, 
+    cardNames: string[]
+  ): Promise<void> {
+    const items = await fs.readdir(currentDir, { withFileTypes: true });
+    
+    for (const item of items) {
+      const fullPath = path.join(currentDir, item.name);
+      
+      if (item.isDirectory()) {
+        // 递归扫描子目录
+        await this.scanDirectory(fullPath, baseDir, cardNames);
+      } else if (item.isFile() && item.name.endsWith('.md')) {
+        // 计算相对于基础目录的路径作为卡片名
+        const relativePath = path.relative(baseDir, fullPath);
+        const cardName = relativePath.replace(/\.md$/, '').replace(/\\/g, '/');
+        cardNames.push(cardName);
+      }
     }
   }
 
