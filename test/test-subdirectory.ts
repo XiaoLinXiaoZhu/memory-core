@@ -1,4 +1,4 @@
-import { ZettelkastenManager } from './src/core/ZettelkastenManager.js';
+import { ZettelkastenManager } from '../src/core/ZettelkastenManager.js';
 
 async function testSubdirectorySupport() {
   console.log('🧪 测试子目录支持...\n');

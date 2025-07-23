@@ -20,6 +20,8 @@ import {
 export class ZettelkastenManager {
   private config: Required<ZettelkastenConfig>;
   private cardCache: Map<string, CardContent> = new Map();
+  private weightCache: Map<string, number> = new Map();
+  private fileLastModified: Map<string, number> = new Map();
   private readonly LINK_PATTERN = /\[\[([^\]]+)\]\]/g;
   private readonly EXPAND_START_PATTERN = /!\[\[([^\]]+)\]\]start/g;
   private readonly EXPAND_END_PATTERN = /!\[\[([^\]]+)\]\]end/g;
@@ -126,6 +128,9 @@ export class ZettelkastenManager {
       const content = await fs.readFile(filePath, this.config.encoding);
       const stats = await fs.stat(filePath);
 
+      // 更新文件修改时间记录
+      this.fileLastModified.set(cardName, stats.mtime.getTime());
+
       const card: CardContent = {
         name: cardName,
         content: content.toString(),
@@ -159,6 +164,12 @@ export class ZettelkastenManager {
       // 更新缓存
       const updatedCard = { ...card, updatedAt: new Date() };
       this.cardCache.set(card.name, updatedCard);
+      
+      // 更新文件修改时间记录
+      this.fileLastModified.set(card.name, updatedCard.updatedAt.getTime());
+      
+      // 清除权重缓存（当前卡片及可能受影响的卡片）
+      this.invalidateWeightCache(card.name);
     } catch (error) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.STORAGE_ERROR,
@@ -166,6 +177,38 @@ export class ZettelkastenManager {
         error
       );
     }
+  }
+
+  /**
+   * 检查卡片是否需要重新计算权重
+   */
+  private async checkCacheValidity(cardName: string): Promise<boolean> {
+    const filePath = this.getCardFilePath(cardName);
+    
+    try {
+      if (!(await fs.pathExists(filePath))) {
+        return false;
+      }
+
+      const stats = await fs.stat(filePath);
+      const lastModified = this.fileLastModified.get(cardName);
+      
+      return lastModified !== undefined && lastModified === stats.mtime.getTime();
+    } catch {
+      return false;
+    }
+  }
+
+  /**
+   * 清除权重缓存
+   */
+  private invalidateWeightCache(cardName: string): void {
+    // 清除当前卡片的权重缓存
+    this.weightCache.delete(cardName);
+    
+    // 由于权重计算是递归的，需要清除所有缓存以确保正确性
+    // 在实际应用中，可以通过构建依赖图来优化这个过程
+    this.weightCache.clear();
   }
 
   /**
@@ -284,6 +327,42 @@ export class ZettelkastenManager {
     };
 
     await this.saveCardToFile(card);
+
+    // 分析引用并创建占位文件
+    await this.createPlaceholderCards(content);
+  }
+
+  /**
+   * 分析内容中的引用并为不存在的卡片创建占位文件
+   */
+  private async createPlaceholderCards(content: string): Promise<void> {
+    const references = this.parseCardReferences(content);
+    const uniqueReferences = [...new Set(references.map(ref => ref.cardName))];
+
+    for (const refCardName of uniqueReferences) {
+      try {
+        this.validateCardName(refCardName);
+        const exists = await this.cardExists(refCardName);
+        
+        if (!exists) {
+          // 创建空的占位文件
+          const placeholderContent = `# ${refCardName}\n\n<!-- 这是一个自动创建的占位卡片 -->\n`;
+          const now = new Date();
+          
+          const placeholderCard: CardContent = {
+            name: refCardName,
+            content: placeholderContent,
+            createdAt: now,
+            updatedAt: now
+          };
+
+          await this.saveCardToFile(placeholderCard);
+        }
+      } catch (error) {
+        // 忽略无效的卡片名称，继续处理其他引用
+        console.warn(`Failed to create placeholder for ${refCardName}:`, error);
+      }
+    }
   }
 
   /**
@@ -298,6 +377,8 @@ export class ZettelkastenManager {
       if (await fs.pathExists(filePath)) {
         await fs.remove(filePath);
         this.cardCache.delete(cardName);
+        this.fileLastModified.delete(cardName);
+        this.invalidateWeightCache(cardName);
       }
     } catch (error) {
       throw new ZettelkastenError(
@@ -394,37 +475,50 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 递归计算卡片权重
+   * 递归计算卡片权重（优化版本，使用缓存）
+   * 新算法：当前卡片权重 = 其子卡片所有权重之和，如果没有子卡片，权重为0
    */
   private async calculateWeight(
     cardName: string,
     visited: Set<string> = new Set()
   ): Promise<number> {
-    if (visited.has(cardName)) {
-      return 1; // 防止循环引用
+    // 检查是否有缓存且缓存有效
+    if (this.weightCache.has(cardName) && await this.checkCacheValidity(cardName)) {
+      return this.weightCache.get(cardName)!;
     }
 
-    visited.add(cardName);
+    // 防止循环引用
+    if (visited.has(cardName)) {
+      return 0;
+    }
 
     const card = await this.loadCardFromFile(cardName);
     if (!card) {
-      return 1;
+      this.weightCache.set(cardName, 0);
+      return 0;
     }
 
     const references = this.parseCardReferences(card.content);
     const uniqueReferences = [...new Set(references.map(ref => ref.cardName))];
 
+    // 如果没有引用，权重为0
     if (uniqueReferences.length === 0) {
-      return 1;
+      this.weightCache.set(cardName, 0);
+      return 0;
     }
+
+    const newVisited = new Set(visited);
+    newVisited.add(cardName);
 
     let totalWeight = 0;
     for (const refCardName of uniqueReferences) {
-      const refWeight = await this.calculateWeight(refCardName, new Set(visited));
-      totalWeight += refWeight;
+      const refWeight = await this.calculateWeight(refCardName, newVisited);
+      totalWeight += refWeight + 1; // 子卡片权重 + 1（代表引用本身的权重）
     }
 
-    return totalWeight / uniqueReferences.length;
+    // 缓存结果
+    this.weightCache.set(cardName, totalWeight);
+    return totalWeight;
   }
 
   /**
@@ -464,7 +558,11 @@ export class ZettelkastenManager {
       if (card) {
         const weight = await this.calculateWeight(cardName);
         const characterCount = card.content.length;
-        const value = characterCount > 0 ? weight / characterCount : 0;
+        
+        // 新的价值计算公式: f(x) = ((100) / (1 + e^(-0.07x + 1))) / 字符数
+        // 其中 x 是权重
+        const sigmoidValue = 100 / (1 + Math.exp(-0.07 * weight + 1));
+        const value = characterCount > 0 ? sigmoidValue / characterCount : 0;
 
         values.push({
           cardName,
@@ -496,6 +594,8 @@ export class ZettelkastenManager {
    */
   clearCache(): void {
     this.cardCache.clear();
+    this.weightCache.clear();
+    this.fileLastModified.clear();
   }
 
   /**
