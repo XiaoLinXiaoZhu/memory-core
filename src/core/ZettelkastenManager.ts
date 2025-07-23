@@ -219,12 +219,19 @@ export class ZettelkastenManager {
     let expandedContent = content;
     const expandMatches: Array<{ cardName: string; match: RegExpMatchArray }> = [];
 
-    // 查找所有需要展开的引用 ![[cardName]]，但排除已经是 start/end 标记的
+    // 查找所有需要展开的引用 [[cardName]]，但排除已经是 start/end 标记的
     let match;
-    const expandPattern = /!\[\[([^\]]+)\]\](?!(?:start|end))/g;
+    const expandPattern = /\[\[([^\]]+)\]\]/g;
     while ((match = expandPattern.exec(content)) !== null) {
+      const cardName = match[1].trim();
+      
+      // 跳过已经展开的标记
+      if (content.includes(`![[${cardName}]]start`) || content.includes(`![[${cardName}]]end`)) {
+        continue;
+      }
+      
       expandMatches.push({
-        cardName: match[1].trim(),
+        cardName,
         match
       });
     }
@@ -617,6 +624,46 @@ export class ZettelkastenManager {
   /**
    * 获取卡片统计信息
    */
+  /**
+   * 内容提取拆分功能
+   * 将指定卡片中的特定内容提取出来，创建新的卡片，并在原位置替换为链接
+   */
+  async extraContent(from: string, content: string, to: string): Promise<void> {
+    this.validateCardName(from);
+    this.validateCardName(to);
+
+    if (!content || content.trim() === '') {
+      throw new ZettelkastenError(
+        ZettelkastenErrorType.INVALID_CONFIG,
+        'Content to extract cannot be empty'
+      );
+    }
+
+    // 获取源卡片
+    const sourceCard = await this.loadCardFromFile(from);
+    if (!sourceCard) {
+      throw new ZettelkastenError(
+        ZettelkastenErrorType.CARD_NOT_FOUND,
+        `Source card not found: ${from}`
+      );
+    }
+
+    // 检查源卡片中是否包含要提取的内容
+    if (!sourceCard.content.includes(content)) {
+      throw new ZettelkastenError(
+        ZettelkastenErrorType.INVALID_CONFIG,
+        `Content to extract not found in source card: ${from}`
+      );
+    }
+
+    // 创建或更新目标卡片
+    await this.setContent(to, content);
+
+    // 在源卡片中替换内容为链接
+    const newSourceContent = sourceCard.content.replace(content, `[[${to}]]`);
+    await this.setContent(from, newSourceContent);
+  }
+
   async getStats(): Promise<{
     totalCards: number;
     totalCharacters: number;
