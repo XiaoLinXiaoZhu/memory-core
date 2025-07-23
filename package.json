@@ -1,0 +1,76 @@
+{
+  "name": "modular-mcp-memory",
+  "version": "4.0.0",
+  "description": "模块化MCP记忆系统 v4.0 - 基于Zettelkasten卡片盒笔记法的精简记忆系统",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    },
+    "./core": {
+      "types": "./dist/core/ZettelkastenManager.d.ts",
+      "import": "./dist/core/ZettelkastenManager.js"
+    },
+    "./types": {
+      "types": "./dist/types/index.d.ts",
+      "import": "./dist/types/index.js"
+    }
+  },
+  "scripts": {
+    "start": "tsx src/index.ts",
+    "dev": "tsx --watch src/index.ts",
+    "demo": "tsx demo.ts",
+    "build": "npm run clean && tsc",
+    "build:types": "tsc --declaration --emitDeclarationOnly --outDir dist",
+    "test": "jest",
+    "clean": "rimraf dist",
+    "lint": "echo 'Linting with TypeScript...' && tsc --noEmit",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "mcp",
+    "memory",
+    "zettelkasten",
+    "notes",
+    "knowledge-management",
+    "card-system",
+    "modular"
+  ],
+  "author": "Your Name",
+  "license": "MIT",
+  "dependencies": {
+    "fs-extra": "^11.0.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/fs-extra": "^11.0.0",
+    "@types/jest": "^29.0.0",
+    "jest": "^29.0.0",
+    "ts-jest": "^29.0.0",
+    "tsx": "^4.7.0",
+    "rimraf": "^5.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/your-username/modular-mcp-memory.git"
+  },
+  "bugs": {
+    "url": "https://github.com/your-username/modular-mcp-memory/issues"
+  },
+  "homepage": "https://github.com/your-username/modular-mcp-memory#readme"
+}
