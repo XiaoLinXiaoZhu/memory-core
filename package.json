@@ -1,7 +1,7 @@
 {
   "name": "modular-mcp-memory",
-  "version": "4.0.1",
-  "description": "模块化MCP记忆系统 v4.0 - 基于Zettelkasten卡片盒笔记法的精简记忆系统",
+  "version": "4.1.1",
+  "description": "模块化MCP记忆系统 v4.1.1 - 基于Zettelkasten卡片盒笔记法的精简记忆系统，包含性能优化和智能占位符功能",
   "type": "module",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",

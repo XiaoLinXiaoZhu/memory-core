@@ -249,9 +249,9 @@ export class ZettelkastenManager {
     let expandedContent = content;
     const expandMatches: Array<{ cardName: string; match: RegExpMatchArray }> = [];
 
-    // 查找所有需要展开的引用 ![[cardName]]
+    // 查找所有需要展开的引用 ![[cardName]]，但排除已经是 start/end 标记的
     let match;
-    const expandPattern = /!\[\[([^\]]+)\]\]/g;
+    const expandPattern = /!\[\[([^\]]+)\]\](?!(?:start|end))/g;
     while ((match = expandPattern.exec(content)) !== null) {
       expandMatches.push({
         cardName: match[1].trim(),
