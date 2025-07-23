@@ -168,8 +168,8 @@ export class ZettelkastenManager {
       // 更新文件修改时间记录
       this.fileLastModified.set(card.name, updatedCard.updatedAt.getTime());
       
-      // 清除权重缓存（当前卡片及可能受影响的卡片）
-      this.invalidateWeightCache(card.name);
+      // 清除所有权重缓存（因为任何文件的修改都可能影响权重计算）
+      this.invalidateAllWeights();
     } catch (error) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.STORAGE_ERROR,
@@ -177,38 +177,6 @@ export class ZettelkastenManager {
         error
       );
     }
-  }
-
-  /**
-   * 检查卡片是否需要重新计算权重
-   */
-  private async checkCacheValidity(cardName: string): Promise<boolean> {
-    const filePath = this.getCardFilePath(cardName);
-    
-    try {
-      if (!(await fs.pathExists(filePath))) {
-        return false;
-      }
-
-      const stats = await fs.stat(filePath);
-      const lastModified = this.fileLastModified.get(cardName);
-      
-      return lastModified !== undefined && lastModified === stats.mtime.getTime();
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * 清除权重缓存
-   */
-  private invalidateWeightCache(cardName: string): void {
-    // 清除当前卡片的权重缓存
-    this.weightCache.delete(cardName);
-    
-    // 由于权重计算是递归的，需要清除所有缓存以确保正确性
-    // 在实际应用中，可以通过构建依赖图来优化这个过程
-    this.weightCache.clear();
   }
 
   /**
@@ -378,7 +346,9 @@ export class ZettelkastenManager {
         await fs.remove(filePath);
         this.cardCache.delete(cardName);
         this.fileLastModified.delete(cardName);
-        this.invalidateWeightCache(cardName);
+        
+        // 清除所有权重缓存
+        this.invalidateAllWeights();
       }
     } catch (error) {
       throw new ZettelkastenError(
@@ -475,16 +445,38 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 递归计算卡片权重（优化版本，使用缓存）
+   * 清除所有权重缓存
+   */
+  private invalidateAllWeights(): void {
+    this.weightCache.clear();
+  }
+
+  /**
+   * 获取缓存的权重
+   */
+  private getCachedWeight(cardName: string): number | null {
+    return this.weightCache.get(cardName) ?? null;
+  }
+
+  /**
+   * 设置权重缓存
+   */
+  private setCachedWeight(cardName: string, weight: number): void {
+    this.weightCache.set(cardName, weight);
+  }
+
+  /**
+   * 递归计算卡片权重
    * 新算法：当前卡片权重 = 其子卡片所有权重之和，如果没有子卡片，权重为0
    */
   private async calculateWeight(
     cardName: string,
     visited: Set<string> = new Set()
   ): Promise<number> {
-    // 检查是否有缓存且缓存有效
-    if (this.weightCache.has(cardName) && await this.checkCacheValidity(cardName)) {
-      return this.weightCache.get(cardName)!;
+    // 检查缓存
+    const cachedWeight = this.getCachedWeight(cardName);
+    if (cachedWeight !== null) {
+      return cachedWeight;
     }
 
     // 防止循环引用
@@ -494,7 +486,7 @@ export class ZettelkastenManager {
 
     const card = await this.loadCardFromFile(cardName);
     if (!card) {
-      this.weightCache.set(cardName, 0);
+      this.setCachedWeight(cardName, 0);
       return 0;
     }
 
@@ -503,7 +495,7 @@ export class ZettelkastenManager {
 
     // 如果没有引用，权重为0
     if (uniqueReferences.length === 0) {
-      this.weightCache.set(cardName, 0);
+      this.setCachedWeight(cardName, 0);
       return 0;
     }
 
@@ -516,8 +508,8 @@ export class ZettelkastenManager {
       totalWeight += refWeight + 1; // 子卡片权重 + 1（代表引用本身的权重）
     }
 
-    // 缓存结果
-    this.weightCache.set(cardName, totalWeight);
+    // 缓存计算结果
+    this.setCachedWeight(cardName, totalWeight);
     return totalWeight;
   }
 

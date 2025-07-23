@@ -1,4 +1,4 @@
-import { ZettelkastenManager } from './dist/index.js';
+import { ZettelkastenManager } from '../dist/index.js';
 import * as path from 'path';
 import fs from 'fs-extra';
 

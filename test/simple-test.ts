@@ -1,4 +1,4 @@
-import { ZettelkastenManager } from './src/index.js';
+import { ZettelkastenManager } from '../src/index.js';
 import * as path from 'path';
 import fs from 'fs-extra';
 

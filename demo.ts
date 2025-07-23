@@ -277,7 +277,7 @@ AI开发必备的编程技能。
 
     // 测试优化建议
     console.log('🎯 测试优化建议：');
-    const suggestions = await manager.getSuggestions(0.01, 3);
+    const suggestions = await manager.getSuggestions(0.2, 3);
     console.log('价值较低的卡片（建议优化）：');
     suggestions.cardNames.forEach((name, index) => {
       const valueInfo = suggestions.values.find(v => v.cardName === name);
