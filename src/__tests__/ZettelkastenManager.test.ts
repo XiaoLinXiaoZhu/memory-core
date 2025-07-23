@@ -1,6 +1,6 @@
 import { ZettelkastenManager } from '../index.js';
 import * as path from 'path';
-import * as fs from 'fs-extra';
+import fs from 'fs-extra';
 
 describe('ZettelkastenManager', () => {
   let manager: ZettelkastenManager;

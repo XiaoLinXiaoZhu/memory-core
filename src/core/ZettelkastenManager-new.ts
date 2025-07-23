@@ -1,4 +1,12 @@
-import fs from 'fs-extra';
+import { 
+  ensureDir, 
+  writeFile, 
+  readFile, 
+  stat, 
+  pathExists, 
+  remove, 
+  readdir 
+} from 'fs-extra';
 import * as path from 'path';
 import {
   CardContent,
@@ -56,7 +64,7 @@ export class ZettelkastenManager {
   private async initializeStorage(): Promise<void> {
     try {
       if (this.config.autoCreateDir) {
-        await fs.ensureDir(this.config.storageDir);
+        await ensureDir(this.config.storageDir);
       }
     } catch (error) {
       throw new ZettelkastenError(
@@ -78,20 +86,12 @@ export class ZettelkastenManager {
       );
     }
 
-    // 检查文件名是否包含非法字符（移除了 / 以支持子目录）
-    const invalidChars = /[<>:"|\\?*]/;
+    // 检查文件名是否包含非法字符
+    const invalidChars = /[<>:"/\\|?*]/;
     if (invalidChars.test(cardName)) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CARD_NAME,
         `Card name contains invalid characters: ${cardName}`
-      );
-    }
-
-    // 验证路径中不能有相对路径操作
-    if (cardName.includes('..') || cardName.includes('./') || cardName.startsWith('/')) {
-      throw new ZettelkastenError(
-        ZettelkastenErrorType.INVALID_CARD_NAME,
-        `Card name cannot contain relative path operations or start with /: ${cardName}`
       );
     }
   }
@@ -100,8 +100,7 @@ export class ZettelkastenManager {
    * 获取卡片文件路径
    */
   private getCardFilePath(cardName: string): string {
-    const filePath = path.join(this.config.storageDir, `${cardName}.md`);
-    return path.normalize(filePath);
+    return path.join(this.config.storageDir, `${cardName}.md`);
   }
 
   /**
@@ -109,7 +108,7 @@ export class ZettelkastenManager {
    */
   private async cardExists(cardName: string): Promise<boolean> {
     const filePath = this.getCardFilePath(cardName);
-    return await fs.pathExists(filePath);
+    return await pathExists(filePath);
   }
 
   /**
@@ -119,12 +118,12 @@ export class ZettelkastenManager {
     const filePath = this.getCardFilePath(cardName);
     
     try {
-      if (!(await fs.pathExists(filePath))) {
+      if (!(await pathExists(filePath))) {
         return null;
       }
 
-      const content = await fs.readFile(filePath, this.config.encoding);
-      const stats = await fs.stat(filePath);
+      const content = await readFile(filePath, this.config.encoding);
+      const stats = await stat(filePath);
 
       const card: CardContent = {
         name: cardName,
@@ -152,9 +151,9 @@ export class ZettelkastenManager {
     
     try {
       // 确保目录存在
-      await fs.ensureDir(path.dirname(filePath));
+      await ensureDir(path.dirname(filePath));
       
-      await fs.outputFile(filePath, card.content, this.config.encoding);
+      await writeFile(filePath, card.content, this.config.encoding);
       
       // 更新缓存
       const updatedCard = { ...card, updatedAt: new Date() };
@@ -295,8 +294,8 @@ export class ZettelkastenManager {
     const filePath = this.getCardFilePath(cardName);
     
     try {
-      if (await fs.pathExists(filePath)) {
-        await fs.remove(filePath);
+      if (await pathExists(filePath)) {
+        await remove(filePath);
         this.cardCache.delete(cardName);
       }
     } catch (error) {
@@ -346,7 +345,7 @@ export class ZettelkastenManager {
    */
   private async updateAllReferences(oldCardName: string, newCardName: string): Promise<void> {
     try {
-      const files = await fs.readdir(this.config.storageDir);
+      const files = await readdir(this.config.storageDir);
       const mdFiles = files.filter((file: string) => file.endsWith('.md'));
 
       for (const file of mdFiles) {
@@ -380,7 +379,7 @@ export class ZettelkastenManager {
    */
   async getAllCardNames(): Promise<string[]> {
     try {
-      const files = await fs.readdir(this.config.storageDir);
+      const files = await readdir(this.config.storageDir);
       return files
         .filter((file: string) => file.endsWith('.md'))
         .map((file: string) => path.basename(file, '.md'));

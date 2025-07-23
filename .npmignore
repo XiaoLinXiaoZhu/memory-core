@@ -1,0 +1,14 @@
+src/
+node_modules/
+*.test.ts
+__tests__/
+demo.ts
+simple-test.ts
+jest.config.json
+tsconfig.json
+.git/
+.gitignore
+*.md
+!README.md
+test-temp/
+demo-cards/
