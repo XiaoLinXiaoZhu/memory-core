@@ -9,6 +9,7 @@ import {
   SuggestionResult,
   ZettelkastenConfig,
   ExpandOptions,
+  ExtractRange,
   ZettelkastenError,
   ZettelkastenErrorType
 } from '../types/index.js';
@@ -625,43 +626,185 @@ export class ZettelkastenManager {
    * 获取卡片统计信息
    */
   /**
-   * 内容提取拆分功能
-   * 将指定卡片中的特定内容提取出来，创建新的卡片，并在原位置替换为链接
+   * 内容提取功能 - 支持精确范围定位
+   * 支持通过行号和正则表达式精确定位内容范围
    */
-  async extractContent(from: string, content: string, to: string): Promise<void> {
-    this.validateCardName(from);
-    this.validateCardName(to);
+  async extractContent(
+    sourceCardName: string, 
+    targetCardName: string, 
+    range?: ExtractRange
+  ): Promise<void> {
+    this.validateCardName(sourceCardName);
+    this.validateCardName(targetCardName);
 
-    if (!content || content.trim() === '') {
+    if (!range) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CONFIG,
-        'Content to extract cannot be empty'
+        'Extract range is required. If you want to rename a file, please use renameContent method.'
       );
     }
 
-    // 获取源卡片
-    const sourceCard = await this.loadCardFromFile(from);
+    const sourceCard = await this.loadCardFromFile(sourceCardName);
     if (!sourceCard) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.CARD_NOT_FOUND,
-        `Source card not found: ${from}`
+        `Source card not found: ${sourceCardName}`
       );
     }
 
-    // 检查源卡片中是否包含要提取的内容
-    if (!sourceCard.content.includes(content)) {
+    const lines = sourceCard.content.split('\n');
+    
+    // 查找开始位置
+    let startIndex = 0;
+    if (range.start) {
+      if (range.start.line !== undefined) {
+        startIndex = Math.max(0, range.start.line - 1); // 转换为0-based
+      }
+      
+      if (range.start.regex) {
+        const regex = new RegExp(range.start.regex.replace(/^\/|\/$/g, ''));
+        for (let i = startIndex; i < lines.length; i++) {
+          if (regex.test(lines[i])) {
+            startIndex = i;
+            break;
+          }
+        }
+      }
+    }
+
+    // 查找结束位置
+    let endIndex = lines.length - 1;
+    if (range.end) {
+      if (range.end.line !== undefined) {
+        endIndex = Math.min(lines.length - 1, range.end.line - 1); // 转换为0-based
+      }
+      
+      if (range.end.regex) {
+        const regex = new RegExp(range.end.regex.replace(/^\/|\/$/g, ''));
+        // 从指定位置开始向后搜索
+        for (let i = endIndex; i >= startIndex; i--) {
+          if (regex.test(lines[i])) {
+            endIndex = i - 1; // 不包含匹配行本身
+            break;
+          }
+        }
+      }
+    }
+
+    if (startIndex > endIndex) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CONFIG,
-        `Content to extract not found in source card: ${from}`
+        'Invalid range: start position is after end position'
       );
+    }
+
+    // 提取内容
+    const extractedLines = lines.slice(startIndex, endIndex + 1);
+    const extractedContent = extractedLines.join('\n');
+
+    if (!extractedContent.trim()) {
+      throw new ZettelkastenError(
+        ZettelkastenErrorType.INVALID_CONFIG,
+        'No content found in the specified range'
+      );
+    }
+
+    // 检查目标卡片是否已存在
+    const targetCard = await this.loadCardFromFile(targetCardName);
+    let finalContent = extractedContent;
+    
+    if (targetCard) {
+      // 如果目标卡片存在，将新内容追加到现有内容中
+      finalContent = `${targetCard.content}\n\n---\n\n${extractedContent}`;
     }
 
     // 创建或更新目标卡片
-    await this.setContent(to, content);
+    await this.setContent(targetCardName, finalContent);
 
-    // 在源卡片中替换内容为链接
-    const newSourceContent = sourceCard.content.replace(content, `[[${to}]]`);
-    await this.setContent(from, newSourceContent);
+    // 在源卡片中替换提取的内容为链接
+    const beforeLines = lines.slice(0, startIndex);
+    const afterLines = lines.slice(endIndex + 1);
+    const newSourceLines = [...beforeLines, `[[${targetCardName}]]`, ...afterLines];
+    const newSourceContent = newSourceLines.join('\n');
+    
+    await this.setContent(sourceCardName, newSourceContent);
+  }
+
+  /**
+   * 在指定位置插入链接
+   */
+  async insertLinkAt(
+    sourceCardName: string, 
+    targetCardName: string, 
+    linePosition?: number, 
+    anchorText?: string
+  ): Promise<void> {
+    this.validateCardName(sourceCardName);
+    this.validateCardName(targetCardName);
+
+    const sourceCard = await this.loadCardFromFile(sourceCardName);
+    if (!sourceCard) {
+      throw new ZettelkastenError(
+        ZettelkastenErrorType.CARD_NOT_FOUND,
+        `Source card not found: ${sourceCardName}`
+      );
+    }
+
+    // 构建链接文本
+    const linkText = anchorText ? `${anchorText} [[${targetCardName}]]` : `[[${targetCardName}]]`;
+    
+    const lines = sourceCard.content.split('\n');
+    
+    // 处理行位置
+    let insertPosition: number;
+    if (linePosition === undefined || linePosition === 0) {
+      // 默认添加到文件末尾
+      insertPosition = lines.length;
+    } else if (linePosition < 0) {
+      // 负数表示从文件末尾开始计数
+      insertPosition = Math.max(0, lines.length + linePosition + 1);
+    } else {
+      // 正数表示从文件开头开始计数（1-based）
+      insertPosition = Math.min(linePosition, lines.length);
+    }
+
+    // 插入链接
+    lines.splice(insertPosition, 0, linkText);
+    
+    const newContent = lines.join('\n');
+    await this.setContent(sourceCardName, newContent);
+
+    // 确保目标卡片存在（创建占位符如果不存在）
+    if (!(await this.cardExists(targetCardName))) {
+      const placeholderContent = `# ${targetCardName}\n\n<!-- 这是一个自动创建的占位卡片 -->\n`;
+      await this.setContent(targetCardName, placeholderContent);
+    }
+  }
+
+  /**
+   * 获取指定卡片的所有反向链接
+   */
+  async getBacklinks(cardName: string): Promise<string[]> {
+    this.validateCardName(cardName);
+
+    const allCardNames = await this.getAllCardNames();
+    const backlinks: string[] = [];
+
+    for (const otherCardName of allCardNames) {
+      if (otherCardName === cardName) continue;
+
+      const otherCard = await this.loadCardFromFile(otherCardName);
+      if (otherCard) {
+        const references = this.parseCardReferences(otherCard.content);
+        const hasReference = references.some(ref => ref.cardName === cardName);
+        
+        if (hasReference) {
+          backlinks.push(otherCardName);
+        }
+      }
+    }
+
+    return backlinks;
   }
 
   async getStats(): Promise<{

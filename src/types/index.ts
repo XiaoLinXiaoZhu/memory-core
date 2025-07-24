@@ -91,6 +91,26 @@ export interface ExpandOptions {
 }
 
 /**
+ * 提取范围定位接口
+ */
+export interface ExtractRange {
+  /** 开始位置 */
+  start?: {
+    /** 起始行号（1-based），如果不提供则从文件开头开始 */
+    line?: number;
+    /** 正则表达式匹配，从指定行号开始搜索匹配的内容 */
+    regex?: string;
+  };
+  /** 结束位置 */
+  end?: {
+    /** 结束行号（1-based），如果不提供则从文件结尾开始 */
+    line?: number;
+    /** 正则表达式匹配，从指定行号开始倒过来搜索匹配的内容 */
+    regex?: string;
+  };
+}
+
+/**
  * 错误类型枚举
  */
 export enum ZettelkastenErrorType {
