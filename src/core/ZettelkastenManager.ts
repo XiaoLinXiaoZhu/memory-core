@@ -628,7 +628,7 @@ export class ZettelkastenManager {
    * 内容提取拆分功能
    * 将指定卡片中的特定内容提取出来，创建新的卡片，并在原位置替换为链接
    */
-  async extraContent(from: string, content: string, to: string): Promise<void> {
+  async extractContent(from: string, content: string, to: string): Promise<void> {
     this.validateCardName(from);
     this.validateCardName(to);
 
