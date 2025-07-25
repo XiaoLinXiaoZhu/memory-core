@@ -654,47 +654,62 @@ export class ZettelkastenManager {
 
     const lines = sourceCard.content.split('\n');
     
+
     // 查找开始位置
-    let startIndex = 0;
+    let startIndex: number | null = 0;
     if (range.start) {
       if (range.start.line !== undefined) {
         startIndex = Math.max(0, range.start.line - 1); // 转换为0-based
       }
-      
       if (range.start.regex) {
         const regex = new RegExp(range.start.regex.replace(/^\/|\/$/g, ''));
-        for (let i = startIndex; i < lines.length; i++) {
+        let found = false;
+        for (let i = startIndex ?? 0; i < lines.length; i++) {
           if (regex.test(lines[i])) {
             startIndex = i;
+            found = true;
             break;
           }
+        }
+        if (!found) {
+          throw new ZettelkastenError(
+            ZettelkastenErrorType.INVALID_CONFIG,
+            'Start regex did not match any line in the source card.'
+          );
         }
       }
     }
 
     // 查找结束位置
-    let endIndex = lines.length - 1;
+    let endIndex: number | null = lines.length - 1;
     if (range.end) {
       if (range.end.line !== undefined) {
         endIndex = Math.min(lines.length - 1, range.end.line - 1); // 转换为0-based
       }
-      
       if (range.end.regex) {
         const regex = new RegExp(range.end.regex.replace(/^\/|\/$/g, ''));
-        // 从指定位置开始向后搜索
-        for (let i = endIndex; i >= startIndex; i--) {
+        let found = false;
+        for (let i = endIndex ?? (lines.length - 1); i >= (startIndex ?? 0); i--) {
           if (regex.test(lines[i])) {
             endIndex = i - 1; // 不包含匹配行本身
+            found = true;
             break;
           }
+        }
+        if (!found) {
+          throw new ZettelkastenError(
+            ZettelkastenErrorType.INVALID_CONFIG,
+            'End regex did not match any line in the source card.'
+          );
         }
       }
     }
 
-    if (startIndex > endIndex) {
+
+    if (startIndex === null || endIndex === null || startIndex > endIndex) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CONFIG,
-        'Invalid range: start position is after end position'
+        'Invalid range: start position is after end position or not matched.'
       );
     }
 
