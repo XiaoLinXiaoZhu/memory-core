@@ -34,7 +34,8 @@
     "test:simple": "tsx test/simple-test.ts",
     "clean": "rimraf dist",
     "lint": "echo 'Linting with TypeScript...' && tsc --noEmit",
-    "prepublishOnly": "npm run clean && npm run build"
+    "prepublishOnly": "npm run clean && npm run build",
+    "publish": "npm version patch && npm publish"
   },
   "keywords": [
     "mcp",
