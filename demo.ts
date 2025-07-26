@@ -13,9 +13,9 @@ async function demo() {
   });
 
   try {
-    console.log('📝 创建示例卡片...\n');
+    console.log('📝 创建示例记忆片段...\n');
 
-    // 创建一些示例卡片
+    // 创建一些示例记忆片段
     await manager.setContent('AI学习路径', `
 # AI学习路径
 
@@ -179,8 +179,8 @@ AI开发必备的编程技能。
 为[[AI学习路径]]提供技术基础。
 `);
 
-    // 创建子目录结构的卡片
-    console.log('📁 创建子目录结构卡片...\n');
+    // 创建子目录结构的记忆片段
+    console.log('📁 创建子目录结构记忆片段...\n');
     
     await manager.setContent('技术栈/前端/React', `
 # React 前端框架
@@ -239,15 +239,15 @@ AI开发必备的编程技能。
 遵循 [[AI学习路径]] 的指导。
 `);
 
-    console.log('✅ 卡片创建完成！\n');
+    console.log('✅ 记忆片段创建完成！\n');
 
     // 测试子目录功能
     console.log('📁 测试子目录功能：');
     console.log('─'.repeat(50));
     
-    // 读取子目录卡片
+    // 读取子目录记忆片段
     const reactCard = await manager.getContent('技术栈/前端/React', 0);
-    console.log('📄 子目录卡片内容 [技术栈/前端/React]:');
+    console.log('📄 子目录记忆片段内容 [技术栈/前端/React]:');
     console.log(reactCard.substring(0, 150) + '...\n');
     
     // 测试跨目录引用展开
@@ -268,7 +268,7 @@ AI开发必备的编程技能。
     // 测试权重计算和提示
     console.log('⚖️ 测试权重计算和提示：');
     const hints = await manager.getHints(5);
-    console.log('按权重排序的前5个卡片：');
+    console.log('按权重排序的前5个记忆片段：');
     hints.cardNames.forEach((name, index) => {
       const weight = hints.weights.find(w => w.cardName === name)?.weight.toFixed(3);
       console.log(`${index + 1}. ${name} (权重: ${weight})`);
@@ -278,7 +278,7 @@ AI开发必备的编程技能。
     // 测试优化建议
     console.log('🎯 测试优化建议：');
     const suggestions = await manager.getSuggestions(0.2, 3);
-    console.log('价值较低的卡片（建议优化）：');
+    console.log('价值较低的记忆片段（建议优化）：');
     suggestions.cardNames.forEach((name, index) => {
       const valueInfo = suggestions.values.find(v => v.cardName === name);
       console.log(`${index + 1}. ${name} (价值: ${valueInfo?.value.toFixed(5)}, 字符数: ${valueInfo?.characterCount})`);
@@ -287,18 +287,18 @@ AI开发必备的编程技能。
 
     // 测试重命名功能
     console.log('🔄 测试重命名功能：');
-    await manager.setContent('临时卡片', '这是一个临时卡片，引用了[[AI学习路径]]');
-    await manager.renameContent('临时卡片', '重命名后的卡片');
-    const renamedContent = await manager.getContent('重命名后的卡片');
+    await manager.setContent('临时记忆片段', '这是一个临时记忆片段，引用了[[AI学习路径]]');
+    await manager.renameContent('临时记忆片段', '重命名后的记忆片段');
+    const renamedContent = await manager.getContent('重命名后的记忆片段');
     console.log('重命名后的内容：', renamedContent.substring(0, 100));
     console.log();
 
     // 获取统计信息
     console.log('📊 系统统计信息：');
     const stats = await manager.getStats();
-    console.log(`总卡片数: ${stats.totalCards}`);
+    console.log(`总记忆片段数: ${stats.totalCards}`);
     console.log(`总字符数: ${stats.totalCharacters}`);
-    console.log(`平均卡片大小: ${Math.round(stats.averageCardSize)} 字符`);
+    console.log(`平均记忆片段大小: ${Math.round(stats.averageCardSize)} 字符`);
     console.log(`最后更新: ${stats.lastUpdated?.toLocaleString()}`);
     console.log();
 

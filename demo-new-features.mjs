@@ -18,8 +18,8 @@ async function demonstrateNewFeatures() {
   console.log('🚀 演示 ZettelkastenManager 新功能\n');
 
   try {
-    // 1. 创建一些示例卡片
-    console.log('1. 创建示例卡片...');
+    // 1. 创建一些示例记忆片段
+    console.log('1. 创建示例记忆片段...');
     
     await manager.setContent('项目计划', `# 项目计划
 
@@ -56,7 +56,7 @@ RESTful API 设计
 ## 部署方案
 使用 Docker 容器化部署`);
 
-    console.log('✅ 示例卡片创建完成\n');
+    console.log('✅ 示例记忆片段创建完成\n');
 
     // 2. 演示 insertLinkAt 功能
     console.log('2. 演示 insertLinkAt 功能...');
@@ -124,8 +124,8 @@ RESTful API 设计
     console.log(`技术栈说明的反向链接: [${stackBacklinks.join(', ')}]`);
     console.log('');
 
-    // 8. 显示卡片统计
-    console.log('8. 卡片统计信息...');
+    // 8. 显示记忆片段统计
+    console.log('8. 记忆片段统计信息...');
     const stats = await manager.getStats();
     console.log('统计信息:', stats);
 

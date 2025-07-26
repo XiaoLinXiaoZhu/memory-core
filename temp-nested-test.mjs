@@ -17,16 +17,16 @@ async function testNestedExpansion() {
     storageDir: testDir
   });
   
-  // 创建基础卡片
+  // 创建基础记忆片段
   await manager.setContent('基础概念', '这是基础概念的内容');
   
-  // 创建引用基础概念的卡片
+  // 创建引用基础概念的记忆片段
   await manager.setContent('中级概念', '这是中级概念，基于 [[基础概念]]');
   
-  // 创建引用中级概念的高级卡片
+  // 创建引用中级概念的高级记忆片段
   await manager.setContent('高级概念', '这是高级概念，基于 [[中级概念]]，也引用 [[基础概念]]');
   
-  // 创建包含展开标记的卡片
+  // 创建包含展开标记的记忆片段
   await manager.setContent('展开测试', '开始展开：\n![[高级概念]]\n结束展开');
   
   console.log('1. 测试基本展开（深度1）');

@@ -20,9 +20,9 @@ describe('ZettelkastenManager', () => {
     }
   });
 
-  test('应该能够创建和获取卡片内容', async () => {
+  test('应该能够创建和获取记忆片段内容', async () => {
     const cardName = 'test-card';
-    const content = '这是一个测试卡片';
+    const content = '这是一个测试记忆片段';
 
     await manager.setContent(cardName, content);
     const retrievedContent = await manager.getContent(cardName);
@@ -30,15 +30,15 @@ describe('ZettelkastenManager', () => {
     expect(retrievedContent).toBe(content);
   });
 
-  test('应该能够处理卡片引用', async () => {
-    await manager.setContent('card1', '这是卡片1的内容');
-    await manager.setContent('card2', '这是卡片2，引用了[[card1]]');
+  test('应该能够处理记忆片段引用', async () => {
+    await manager.setContent('card1', '这是记忆片段1的内容');
+    await manager.setContent('card2', '这是记忆片段2，引用了[[card1]]');
 
     const content = await manager.getContent('card2');
     expect(content).toContain('[[card1]]');
   });
 
-  test('应该能够展开卡片内容', async () => {
+  test('应该能够展开记忆片段内容', async () => {
     await manager.setContent('base', '基础内容');
     await manager.setContent('main', '主要内容 ![[base]]');
 
@@ -48,7 +48,7 @@ describe('ZettelkastenManager', () => {
     expect(expandedContent).toContain('![[base]]end');
   });
 
-  test('应该能够删除卡片', async () => {
+  test('应该能够删除记忆片段', async () => {
     const cardName = 'delete-test';
     await manager.setContent(cardName, '待删除的内容');
     
@@ -57,7 +57,7 @@ describe('ZettelkastenManager', () => {
     await expect(manager.getContent(cardName)).rejects.toThrow();
   });
 
-  test('应该能够重命名卡片', async () => {
+  test('应该能够重命名记忆片段', async () => {
     const oldName = 'old-name';
     const newName = 'new-name';
     const content = '测试内容';

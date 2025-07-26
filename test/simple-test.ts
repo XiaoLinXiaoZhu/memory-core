@@ -38,10 +38,10 @@ async function runTests() {
     autoCreateDir: true
   });
 
-  // 测试1: 创建和获取卡片
-  await test('应该能够创建和获取卡片内容', async () => {
+  // 测试1: 创建和获取记忆片段
+  await test('应该能够创建和获取记忆片段内容', async () => {
     const cardName = 'test-card';
-    const content = '这是一个测试卡片';
+    const content = '这是一个测试记忆片段';
 
     await manager.setContent(cardName, content);
     const retrievedContent = await manager.getContent(cardName);
@@ -51,10 +51,10 @@ async function runTests() {
     }
   })();
 
-  // 测试2: 处理卡片引用
-  await test('应该能够处理卡片引用', async () => {
-    await manager.setContent('card1', '这是卡片1的内容');
-    await manager.setContent('card2', '这是卡片2，引用了[[card1]]');
+  // 测试2: 处理记忆片段引用
+  await test('应该能够处理记忆片段引用', async () => {
+    await manager.setContent('card1', '这是记忆片段1的内容');
+    await manager.setContent('card2', '这是记忆片段2，引用了[[card1]]');
 
     const content = await manager.getContent('card2');
     if (!content.includes('[[card1]]')) {
@@ -62,8 +62,8 @@ async function runTests() {
     }
   })();
 
-  // 测试3: 展开卡片内容
-  await test('应该能够展开卡片内容', async () => {
+  // 测试3: 展开记忆片段内容
+  await test('应该能够展开记忆片段内容', async () => {
     await manager.setContent('base', '基础内容');
     await manager.setContent('main', '主要内容 ![[base]]');
 
@@ -75,8 +75,8 @@ async function runTests() {
     }
   })();
 
-  // 测试4: 删除卡片
-  await test('应该能够删除卡片', async () => {
+  // 测试4: 删除记忆片段
+  await test('应该能够删除记忆片段', async () => {
     const cardName = 'delete-test';
     await manager.setContent(cardName, '待删除的内容');
     
@@ -84,7 +84,7 @@ async function runTests() {
     
     try {
       await manager.getContent(cardName);
-      throw new Error('卡片应该已被删除');
+      throw new Error('记忆片段应该已被删除');
     } catch (error: any) {
       if (!error.message.includes('Card not found')) {
         throw error;
@@ -92,8 +92,8 @@ async function runTests() {
     }
   })();
 
-  // 测试5: 重命名卡片
-  await test('应该能够重命名卡片', async () => {
+  // 测试5: 重命名记忆片段
+  await test('应该能够重命名记忆片段', async () => {
     const oldName = 'old-name';
     const newName = 'new-name';
     const content = '测试内容';
@@ -108,7 +108,7 @@ async function runTests() {
 
     try {
       await manager.getContent(oldName);
-      throw new Error('旧名称的卡片应该不存在');
+      throw new Error('旧名称的记忆片段应该不存在');
     } catch (error: any) {
       if (!error.message.includes('Card not found')) {
         throw error;

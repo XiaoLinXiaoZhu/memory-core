@@ -20,14 +20,14 @@ async function testOptimizations() {
 
     // 测试1: 自动创建占位文件
     console.log('1. 测试自动创建占位文件');
-    await manager.setContent('主卡片', '这是主卡片，引用了[[子卡片1]]和[[子卡片2]]');
+    await manager.setContent('主记忆片段', '这是主记忆片段，引用了[[子记忆片段1]]和[[子记忆片段2]]');
     
     // 检查占位文件是否被创建
-    const content1 = await manager.getContent('子卡片1');
-    const content2 = await manager.getContent('子卡片2');
+    const content1 = await manager.getContent('子记忆片段1');
+    const content2 = await manager.getContent('子记忆片段2');
     console.log('✅ 占位文件已创建');
-    console.log('  子卡片1内容:', content1.substring(0, 50) + '...');
-    console.log('  子卡片2内容:', content2.substring(0, 50) + '...');
+    console.log('  子记忆片段1内容:', content1.substring(0, 50) + '...');
+    console.log('  子记忆片段2内容:', content2.substring(0, 50) + '...');
 
     // 测试2: 权重计算（新算法）
     console.log('\n2. 测试权重计算');
@@ -44,7 +44,7 @@ async function testOptimizations() {
     console.log('\n3. 测试优化建议（新价值公式）');
     const suggestions = await manager.getSuggestions(1, 5);
     console.log('✅ 优化建议生成完成');
-    console.log('  低价值卡片:', suggestions.values.slice(0, 3).map(v => 
+    console.log('  低价值记忆片段:', suggestions.values.slice(0, 3).map(v => 
       `${v.cardName}: 价值=${v.value.toFixed(4)}, 权重=${v.weight}, 字符数=${v.characterCount}`
     ));
 

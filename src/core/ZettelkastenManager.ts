@@ -15,8 +15,8 @@ import {
 } from '../types/index.js';
 
 /**
- * Zettelkasten 卡片盒管理器
- * 基于文件系统的卡片存储和管理系统
+ * Zettelkasten 记忆片段盒管理器
+ * 基于文件系统的记忆片段存储和管理系统
  */
 export class ZettelkastenManager {
   private config: Required<ZettelkastenConfig>;
@@ -71,7 +71,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 验证卡片名称
+   * 验证记忆片段名称
    */
   private validateCardName(cardName: string): void {
     if (!cardName || cardName.trim() === '') {
@@ -100,7 +100,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 获取卡片文件路径（支持嵌套目录）
+   * 获取记忆片段文件路径（支持嵌套目录）
    */
   private getCardFilePath(cardName: string): string {
     // 将 / 转换为系统路径分隔符，支持嵌套目录
@@ -110,7 +110,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 检查卡片是否存在
+   * 检查记忆片段是否存在
    */
   private async cardExists(cardName: string): Promise<boolean> {
     const filePath = this.getCardFilePath(cardName);
@@ -118,7 +118,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 从文件加载卡片内容
+   * 从文件加载记忆片段内容
    */
   private async loadCardFromFile(cardName: string): Promise<CardContent | null> {
     const filePath = this.getCardFilePath(cardName);
@@ -153,7 +153,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 保存卡片到文件
+   * 保存记忆片段到文件
    */
   private async saveCardToFile(card: CardContent): Promise<void> {
     const filePath = this.getCardFilePath(card.name);
@@ -183,7 +183,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 解析卡片中的链接引用
+   * 解析记忆片段中的链接引用
    */
   private parseCardReferences(content: string): CardReference[] {
     const references: CardReference[] = [];
@@ -201,7 +201,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 展开卡片内容中的引用
+   * 展开记忆片段内容中的引用
    */
   private async expandCardContent(
     content: string,
@@ -249,7 +249,7 @@ export class ZettelkastenManager {
         const newExpandedCards = new Set(expandedCards);
         newExpandedCards.add(cardName);
 
-        // 递归展开引用的卡片内容
+        // 递归展开引用的记忆片段内容
         const expandedRefContent = await this.expandCardContent(
           referencedCard.content,
           { depth: depth + 1, maxDepth, expandedCards: newExpandedCards }
@@ -311,7 +311,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 分析内容中的引用并为不存在的卡片创建占位文件
+   * 分析内容中的引用并为不存在的记忆片段创建占位文件
    */
   private async createPlaceholderCards(content: string): Promise<void> {
     const references = this.parseCardReferences(content);
@@ -324,7 +324,7 @@ export class ZettelkastenManager {
         
         if (!exists) {
           // 创建空的占位文件
-          const placeholderContent = `# ${refCardName}\n\n<!-- 这是一个自动创建的占位卡片 -->\n`;
+          const placeholderContent = `# ${refCardName}\n\n<!-- 这是一个自动创建的占位记忆片段 -->\n`;
           const now = new Date();
           
           const placeholderCard: CardContent = {
@@ -337,7 +337,7 @@ export class ZettelkastenManager {
           await this.saveCardToFile(placeholderCard);
         }
       } catch (error) {
-        // 忽略无效的卡片名称，继续处理其他引用
+        // 忽略无效的记忆片段名称，继续处理其他引用
         console.warn(`Failed to create placeholder for ${refCardName}:`, error);
       }
     }
@@ -395,7 +395,7 @@ export class ZettelkastenManager {
     // 保存到新名称
     await this.setContent(newCardName, finalContent);
 
-    // 删除旧卡片
+    // 删除旧记忆片段
     await this.deleteContent(oldCardName);
 
     // 更新所有引用
@@ -403,7 +403,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 更新所有卡片中的引用（支持嵌套目录）
+   * 更新所有记忆片段中的引用（支持嵌套目录）
    */
   private async updateAllReferences(oldCardName: string, newCardName: string): Promise<void> {
     try {
@@ -435,7 +435,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 递归获取所有卡片名称（支持嵌套目录）
+   * 递归获取所有记忆片段名称（支持嵌套目录）
    */
   async getAllCardNames(): Promise<string[]> {
     try {
@@ -468,7 +468,7 @@ export class ZettelkastenManager {
         // 递归扫描子目录
         await this.scanDirectory(fullPath, baseDir, cardNames);
       } else if (item.isFile() && item.name.endsWith('.md')) {
-        // 计算相对于基础目录的路径作为卡片名
+        // 计算相对于基础目录的路径作为记忆片段名
         const relativePath = path.relative(baseDir, fullPath);
         const cardName = relativePath.replace(/\.md$/, '').replace(/\\/g, '/');
         cardNames.push(cardName);
@@ -498,8 +498,8 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 递归计算卡片权重
-   * 新算法：当前卡片权重 = 其子卡片所有权重之和，如果没有子卡片，权重为0
+   * 递归计算记忆片段权重
+   * 新算法：当前记忆片段权重 = 其子记忆片段所有权重之和，如果没有子记忆片段，权重为0
    */
   private async calculateWeight(
     cardName: string,
@@ -537,7 +537,7 @@ export class ZettelkastenManager {
     let totalWeight = 0;
     for (const refCardName of uniqueReferences) {
       const refWeight = await this.calculateWeight(refCardName, newVisited);
-      totalWeight += refWeight + 1; // 子卡片权重 + 1（代表引用本身的权重）
+      totalWeight += refWeight + 1; // 子记忆片段权重 + 1（代表引用本身的权重）
     }
 
     // 缓存计算结果
@@ -597,7 +597,7 @@ export class ZettelkastenManager {
       }
     }
 
-    // 筛选价值小于优化参数的卡片
+    // 筛选价值小于优化参数的记忆片段
     const lowValueCards = values.filter(v => v.value < optimizationParam);
 
     // 按价值从低到高排序
@@ -623,7 +623,7 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 获取卡片统计信息
+   * 获取记忆片段统计信息
    */
   /**
    * 内容提取功能 - 支持精确范围定位
@@ -724,19 +724,19 @@ export class ZettelkastenManager {
       );
     }
 
-    // 检查目标卡片是否已存在
+    // 检查目标记忆片段是否已存在
     const targetCard = await this.loadCardFromFile(targetCardName);
     let finalContent = extractedContent;
     
     if (targetCard) {
-      // 如果目标卡片存在，将新内容追加到现有内容中
+      // 如果目标记忆片段存在，将新内容追加到现有内容中
       finalContent = `${targetCard.content}\n\n---\n\n${extractedContent}`;
     }
 
-    // 创建或更新目标卡片
+    // 创建或更新目标记忆片段
     await this.setContent(targetCardName, finalContent);
 
-    // 在源卡片中替换提取的内容为链接
+    // 在源记忆片段中替换提取的内容为链接
     const beforeLines = lines.slice(0, startIndex);
     const afterLines = lines.slice(endIndex + 1);
     const newSourceLines = [...beforeLines, `[[${targetCardName}]]`, ...afterLines];
@@ -789,15 +789,15 @@ export class ZettelkastenManager {
     const newContent = lines.join('\n');
     await this.setContent(sourceCardName, newContent);
 
-    // 确保目标卡片存在（创建占位符如果不存在）
+    // 确保目标记忆片段存在（创建占位符如果不存在）
     if (!(await this.cardExists(targetCardName))) {
-      const placeholderContent = `# ${targetCardName}\n\n<!-- 这是一个自动创建的占位卡片 -->\n`;
+      const placeholderContent = `# ${targetCardName}\n\n<!-- 这是一个自动创建的占位记忆片段 -->\n`;
       await this.setContent(targetCardName, placeholderContent);
     }
   }
 
   /**
-   * 获取指定卡片的所有反向链接
+   * 获取指定记忆片段的所有反向链接
    */
   async getBacklinks(cardName: string): Promise<string[]> {
     this.validateCardName(cardName);

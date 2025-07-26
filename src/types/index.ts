@@ -1,10 +1,10 @@
 /**
- * 卡片内容接口
+ * 记忆片段内容接口
  */
 export interface CardContent {
-  /** 卡片名称 */
+  /** 记忆片段名称 */
   name: string;
-  /** 卡片内容 */
+  /** 记忆片段内容 */
   content: string;
   /** 创建时间 */
   createdAt: Date;
@@ -13,12 +13,12 @@ export interface CardContent {
 }
 
 /**
- * 卡片引用接口
+ * 记忆片段引用接口
  */
 export interface CardReference {
-  /** 引用的卡片名称 */
+  /** 引用的记忆片段名称 */
   cardName: string;
-  /** 在当前卡片中的位置（字符索引） */
+  /** 在当前记忆片段中的位置（字符索引） */
   position: number;
 }
 
@@ -26,7 +26,7 @@ export interface CardReference {
  * 权重计算结果接口
  */
 export interface WeightResult {
-  /** 卡片名称 */
+  /** 记忆片段名称 */
   cardName: string;
   /** 权重值 */
   weight: number;
@@ -36,7 +36,7 @@ export interface WeightResult {
  * 价值计算结果接口
  */
 export interface ValueResult {
-  /** 卡片名称 */
+  /** 记忆片段名称 */
   cardName: string;
   /** 价值值 */
   value: number;
@@ -50,7 +50,7 @@ export interface ValueResult {
  * 提示结果接口
  */
 export interface HintResult {
-  /** 卡片名称列表，按权重从高到低排序 */
+  /** 记忆片段名称列表，按权重从高到低排序 */
   cardNames: string[];
   /** 权重详情 */
   weights: WeightResult[];
@@ -60,7 +60,7 @@ export interface HintResult {
  * 优化建议结果接口
  */
 export interface SuggestionResult {
-  /** 建议优化的卡片名称列表，按价值从低到高排序 */
+  /** 建议优化的记忆片段名称列表，按价值从低到高排序 */
   cardNames: string[];
   /** 价值详情 */
   values: ValueResult[];
@@ -86,7 +86,7 @@ export interface ExpandOptions {
   depth?: number;
   /** 最大展开深度，防止循环引用，默认为 10 */
   maxDepth?: number;
-  /** 已展开的卡片集合，用于防止循环引用 */
+  /** 已展开的记忆片段集合，用于防止循环引用 */
   expandedCards?: Set<string>;
 }
 

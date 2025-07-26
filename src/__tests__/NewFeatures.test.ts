@@ -24,7 +24,7 @@ describe('ZettelkastenManager - New Features', () => {
 
   describe('insertLinkAt', () => {
     it('should insert link at the end by default', async () => {
-      // 创建源卡片
+      // 创建源记忆片段
       await manager.setContent('source', 'Line 1\nLine 2\nLine 3');
       
       // 插入链接
@@ -33,7 +33,7 @@ describe('ZettelkastenManager - New Features', () => {
       const content = await manager.getContent('source');
       expect(content).toBe('Line 1\nLine 2\nLine 3\n[[target]]');
       
-      // 检查目标卡片是否自动创建
+      // 检查目标记忆片段是否自动创建
       const targetExists = await fs.pathExists(path.join(testDir, 'target.md'));
       expect(targetExists).toBe(true);
     });

@@ -253,7 +253,7 @@ console.log(isValid); // true
     // 验证所有提取的内容
     console.log('\n📊 测试结果汇总:');
     const allCards = await manager.getAllCardNames();
-    console.log(`总共创建了 ${allCards.length} 个卡片`);
+    console.log(`总共创建了 ${allCards.length} 个记忆片段`);
     
     for (const cardName of allCards) {
       const content = await manager.getContent(cardName);

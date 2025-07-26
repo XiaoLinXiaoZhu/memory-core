@@ -19,8 +19,8 @@ async function demonstrateImprovements() {
     console.log('🚀 ZettelkastenManager 优化演示\n');
     console.log('=' .repeat(50));
 
-    // 演示1: 自动创建占位卡片
-    console.log('\n📝 功能1: 自动创建占位卡片');
+    // 演示1: 自动创建占位记忆片段
+    console.log('\n📝 功能1: 自动创建占位记忆片段');
     console.log('-'.repeat(30));
     
     await manager.setContent('学习计划', `
@@ -40,7 +40,7 @@ async function demonstrateImprovements() {
     `);
 
     const cardNames = await manager.getAllCardNames();
-    console.log('✅ 创建学习计划后，自动生成的卡片:');
+    console.log('✅ 创建学习计划后，自动生成的记忆片段:');
     cardNames.forEach(name => console.log(`  - ${name}`));
 
     // 演示2: 新的权重算法
@@ -57,7 +57,7 @@ async function demonstrateImprovements() {
     await manager.setContent('类型系统', '[[基础类型]] [[高级类型]]');
 
     const hints = await manager.getHints(10);
-    console.log('✅ 权重排序结果（权重 = 子卡片权重之和）:');
+    console.log('✅ 权重排序结果（权重 = 子记忆片段权重之和）:');
     hints.weights.forEach(w => {
       if (w.weight > 0) {
         console.log(`  ${w.cardName}: ${w.weight}`);
@@ -69,10 +69,10 @@ async function demonstrateImprovements() {
     console.log('-'.repeat(30));
     console.log('公式: f(x) = ((100) / (1 + e^(-0.07x + 1))) / 字符数');
     
-    // 创建不同长度和权重的卡片进行对比
-    await manager.setContent('短卡片高权重', '[[子卡片A]] [[子卡片B]] [[子卡片C]]'); // 短内容，高权重
-    await manager.setContent('长卡片低权重', '这是一个很长的内容'.repeat(50)); // 长内容，低权重
-    await manager.setContent('中等卡片', '中等长度内容 [[子卡片D]]'.repeat(10)); // 中等内容
+    // 创建不同长度和权重的记忆片段进行对比
+    await manager.setContent('短记忆片段高权重', '[[子记忆片段A]] [[子记忆片段B]] [[子记忆片段C]]'); // 短内容，高权重
+    await manager.setContent('长记忆片段低权重', '这是一个很长的内容'.repeat(50)); // 长内容，低权重
+    await manager.setContent('中等记忆片段', '中等长度内容 [[子记忆片段D]]'.repeat(10)); // 中等内容
 
     const suggestions = await manager.getSuggestions(10, 10);
     console.log('✅ 价值分析结果:');
@@ -115,9 +115,9 @@ async function demonstrateImprovements() {
     console.log('\n' + '='.repeat(50));
     console.log('🎉 所有优化功能演示完成！');
     console.log('\n优化总结:');
-    console.log('1. ✅ setContent 自动创建引用的占位卡片');
+    console.log('1. ✅ setContent 自动创建引用的占位记忆片段');
     console.log('2. ✅ 权重缓存机制，显著提升性能');
-    console.log('3. ✅ 新权重算法：子卡片权重之和');
+    console.log('3. ✅ 新权重算法：子记忆片段权重之和');
     console.log('4. ✅ 新价值公式：Sigmoid函数 / 字符数');
 
   } catch (error) {
