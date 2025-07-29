@@ -27,6 +27,11 @@ export class ZettelkastenManager {
   private readonly EXPAND_START_PATTERN = /!\[\[([^\]]+)\]\]start/g;
   private readonly EXPAND_END_PATTERN = /!\[\[([^\]]+)\]\]end/g;
 
+  public readonly EMPTY_PLACEHOLDER = `<!-- 这是一个自动创建的占位记忆片段 -->\n`;
+  public getEmptyPlaceholder(cardName: string): string {
+    return `# ${cardName}\n\n${this.EMPTY_PLACEHOLDER}`;
+  }
+
   constructor(config: ZettelkastenConfig) {
     this.config = {
       encoding: 'utf-8',
@@ -324,7 +329,7 @@ export class ZettelkastenManager {
         
         if (!exists) {
           // 创建空的占位文件
-          const placeholderContent = `# ${refCardName}\n\n<!-- 这是一个自动创建的占位记忆片段 -->\n`;
+          const placeholderContent = this.getEmptyPlaceholder(refCardName);
           const now = new Date();
           
           const placeholderCard: CardContent = {
@@ -791,7 +796,7 @@ export class ZettelkastenManager {
 
     // 确保目标记忆片段存在（创建占位符如果不存在）
     if (!(await this.cardExists(targetCardName))) {
-      const placeholderContent = `# ${targetCardName}\n\n<!-- 这是一个自动创建的占位记忆片段 -->\n`;
+      const placeholderContent = this.getEmptyPlaceholder(targetCardName);
       await this.setContent(targetCardName, placeholderContent);
     }
   }
