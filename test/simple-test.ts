@@ -149,6 +149,18 @@ async function runTests() {
     }
   })();
 
+  // 测试9: 获取带行号的内容
+  await test('应该能够获取带行号的内容', async () => {
+    const cardName = 'line-number-test';
+    const content = '第一行\n第二行\n第三行';
+    await manager.setContent(cardName, content);
+    const withLine = await manager.getContent(cardName, 0, true);
+    const expected = '1 |第一行\n2 |第二行\n3 |第三行';
+    if (withLine !== expected) {
+      throw new Error(`带行号内容不正确，期望：\n${expected}\n实际：\n${withLine}`);
+    }
+  })();
+
   // 清理
   await cleanup();
 

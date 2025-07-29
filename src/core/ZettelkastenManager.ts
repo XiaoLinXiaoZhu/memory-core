@@ -274,8 +274,11 @@ export class ZettelkastenManager {
 
   /**
    * 1. 获取文件内容
+   * @param cardName 记忆片段名称
+   * @param expandDepth 展开深度，默认0
+   * @param withLineNumber 是否输出行号，默认false
    */
-  async getContent(cardName: string, expandDepth: number = 0): Promise<string> {
+  async getContent(cardName: string, expandDepth: number = 0, withLineNumber: boolean = false): Promise<string> {
     this.validateCardName(cardName);
 
     const card = await this.loadCardFromFile(cardName);
@@ -286,11 +289,20 @@ export class ZettelkastenManager {
       );
     }
 
+    let content: string;
     if (expandDepth <= 0) {
-      return card.content;
+      content = card.content;
+    } else {
+      content = await this.expandCardContent(card.content, { depth: 1, maxDepth: expandDepth });
     }
 
-    return await this.expandCardContent(card.content, { depth: 1, maxDepth: expandDepth });
+    if (withLineNumber) {
+      return content
+        .split('\n')
+        .map((line, idx) => `${idx + 1} |${line}`)
+        .join('\n');
+    }
+    return content;
   }
 
   /**
@@ -781,11 +793,11 @@ export class ZettelkastenManager {
       // 默认添加到文件末尾
       insertPosition = lines.length;
     } else if (linePosition < 0) {
-      // 负数表示从文件末尾开始计数
-      insertPosition = Math.max(0, lines.length + linePosition + 1);
+      // 负数表示从文件末尾开始计数，插入到倒数第|n|行之前
+      insertPosition = Math.max(0, lines.length + linePosition);
     } else {
-      // 正数表示从文件开头开始计数（1-based）
-      insertPosition = Math.min(linePosition, lines.length);
+      // 正数表示从文件开头开始计数（1-based），插入到第linePosition行之前
+      insertPosition = Math.max(0, Math.min(linePosition - 1, lines.length));
     }
 
     // 插入链接

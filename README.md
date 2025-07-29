@@ -29,7 +29,10 @@
 
 ### 1. 获取文件内容
 ```typescript
+// 普通获取
 await manager.getContent(文件名称, 展开深度);
+// 获取带行号内容
+await manager.getContent(文件名称, 展开深度, true);
 ```
 
 ### 2. 创建/编辑文件内容
