@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { ZettelkastenManager } from '../dist/index.js';
 import * as path from 'path';
 import fs from 'fs-extra';
@@ -17,7 +18,7 @@ async function demonstrateImprovements() {
 
   try {
     console.log('🚀 ZettelkastenManager 优化演示\n');
-    console.log('=' .repeat(50));
+    console.log('='.repeat(50));
 
     // 演示1: 自动创建占位记忆片段
     console.log('\n📝 功能1: 自动创建占位记忆片段');

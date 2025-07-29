@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { ZettelkastenManager } from '../dist/index.js';
 import * as path from 'path';
 import fs from 'fs-extra';
@@ -76,4 +77,4 @@ async function testOptimizations() {
 }
 
 // 运行测试
-testOptimizations();
+testOptimizations().catch(console.error);

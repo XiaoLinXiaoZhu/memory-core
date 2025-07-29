@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { ZettelkastenManager } from '../dist/index.js';
 import * as path from 'path';
 import fs from 'fs-extra';
@@ -72,4 +73,4 @@ async function testNestedExpansion() {
 }
 
 // 运行测试
-testNestedExpansion();
+testNestedExpansion().catch(console.error);

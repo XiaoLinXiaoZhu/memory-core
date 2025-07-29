@@ -1,3 +1,4 @@
+#!/usr/bin/env node
 import { ZettelkastenManager } from '../dist/core/ZettelkastenManager.js';
 import * as fs from 'fs-extra';
 import * as path from 'path';
@@ -10,7 +11,8 @@ import * as os from 'os';
 
 async function runComplexFormatTests() {
   // 创建临时测试目录
-  const testDir = await fs.mkdtemp(path.join(os.tmpdir(), 'extract-complex-test-'));
+  const testDir = path.join(os.tmpdir(), 'extract-complex-test-' + Date.now());
+  await fs.ensureDir(testDir);
   const manager = new ZettelkastenManager({
     storageDir: testDir,
     autoCreateDir: true
@@ -174,7 +176,7 @@ model = tf.keras.Sequential([
     // 提取服务拆分原则部分
     await manager.extractContent('microservices-design', 'splitting-principles', {
       start: { regex: '^## 服务拆分原则' },
-      end: { regex: '^## 通信方式' }
+      end: { regex: '^### 通信方式' }
     });
     
     const splittingContent = await manager.getContent('splitting-principles');
@@ -247,7 +249,7 @@ console.log(isValid); // true
       end: { regex: '^### 示例代码' }
     });
     
-    const escapeContent = await manager.getContent('escape-charts');
+    const escapeContent = await manager.getContent('escape-chars');
     console.log('✅ 特殊字符提取成功');
 
     // 验证所有提取的内容
