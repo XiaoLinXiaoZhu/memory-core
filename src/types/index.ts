@@ -67,6 +67,52 @@ export interface SuggestionResult {
 }
 
 /**
+ * 低价值片段结果接口
+ */
+export interface LowValueResult {
+  /** 记忆片段名称 */
+  cardName: string;
+  /** 信息散度值 */
+  divergence: number;
+  /** 权重 */
+  weight: number;
+  /** 字符数 */
+  characterCount: number;
+}
+
+/**
+ * 低价值片段建议结果接口
+ */
+export interface LowValueSuggestionResult {
+  /** 建议优化的低价值记忆片段名称列表，按信息散度从低到高排序 */
+  cardNames: string[];
+  /** 信息散度详情 */
+  divergences: LowValueResult[];
+}
+
+/**
+ * 孤立片段结果接口
+ */
+export interface IsolatedResult {
+  /** 记忆片段名称 */
+  cardName: string;
+  /** 是否孤立 */
+  isIsolated: boolean;
+  /** 反向链接数量 */
+  backlinkCount: number;
+}
+
+/**
+ * 孤立片段建议结果接口
+ */
+export interface IsolatedSuggestionResult {
+  /** 孤立记忆片段名称列表 */
+  cardNames: string[];
+  /** 孤立详情 */
+  isolatedResults: IsolatedResult[];
+}
+
+/**
  * Zettelkasten 管理器配置接口
  */
 export interface ZettelkastenConfig {

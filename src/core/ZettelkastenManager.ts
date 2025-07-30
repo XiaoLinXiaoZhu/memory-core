@@ -7,6 +7,10 @@ import {
   ValueResult,
   HintResult,
   SuggestionResult,
+  LowValueResult,
+  LowValueSuggestionResult,
+  IsolatedResult,
+  IsolatedSuggestionResult,
   ZettelkastenConfig,
   ExpandOptions,
   ExtractRange,
@@ -588,7 +592,24 @@ export class ZettelkastenManager {
   }
 
   /**
-   * 6. 获取优化建议
+   * 判断一个片段是否是系统片段
+   * @param cardName 记忆片段名称
+   * @returns 如果是系统片段返回 true，否则返回 false
+   */
+  private async isSystemCard(cardName: string): Promise<boolean> {
+    const card = this.cardCache.get(cardName);
+    if (card) {
+      return card.content.trim().startsWith('<!-- core memory -->');
+    }
+    
+    // 如果缓存中没有，从文件中读取
+    const fileCard = await this.loadCardFromFile(cardName);
+    return fileCard ? fileCard.content.trim().startsWith('<!-- core memory -->') : false;
+  }
+
+  /**
+   * 6. 获取优化建议（已弃用）
+   * @deprecated 请使用 getLowValueSuggestions 和 getIsolatedSuggestions 方法
    */
   async getSuggestions(optimizationParam: number, maxFileCount: number): Promise<SuggestionResult> {
     const cardNames = await this.getAllCardNames();
@@ -627,6 +648,109 @@ export class ZettelkastenManager {
     return {
       cardNames: resultCardNames,
       values: lowValueCards
+    };
+  }
+
+  /**
+   * 7. 获取低价值片段建议
+   * 使用信息散度计算价值，专注于获取低价值片段
+   * @param optimizationParam 优化参数，用于筛选低价值片段
+   * @param maxFileCount 最大返回数量
+   * @returns 低价值片段建议结果
+   */
+  async getLowValueSuggestions(optimizationParam: number, maxFileCount: number): Promise<LowValueSuggestionResult> {
+    const cardNames = await this.getAllCardNames();
+    const divergences: LowValueResult[] = [];
+
+    for (const cardName of cardNames) {
+      // 跳过系统片段
+      if (await this.isSystemCard(cardName)) {
+        continue;
+      }
+
+      const card = await this.loadCardFromFile(cardName);
+      if (card) {
+        const weight = await this.calculateWeight(cardName);
+        const characterCount = card.content.length;
+        
+        // 使用信息散度计算价值
+        // 信息散度 = 权重 / 字符数
+        // 这样可以鼓励信息的单元化和网络化
+        const divergence = characterCount > 0 ? weight / characterCount : 0;
+
+        divergences.push({
+          cardName,
+          divergence,
+          weight,
+          characterCount
+        });
+      }
+    }
+
+    // 筛选信息散度小于优化参数的记忆片段
+    const lowDivergenceCards = divergences.filter(d => d.divergence < optimizationParam);
+
+    // 按信息散度从低到高排序
+    lowDivergenceCards.sort((a, b) => a.divergence - b.divergence);
+
+    const resultCardNames = lowDivergenceCards
+      .slice(0, maxFileCount)
+      .map(d => d.cardName);
+
+    return {
+      cardNames: resultCardNames,
+      divergences: lowDivergenceCards
+    };
+  }
+
+  /**
+   * 8. 获取孤立片段建议
+   * 专注于获取没有反向链接的孤立片段
+   * @param maxFileCount 最大返回数量
+   * @returns 孤立片段建议结果
+   */
+  async getIsolatedSuggestions(maxFileCount: number): Promise<IsolatedSuggestionResult> {
+    const cardNames = await this.getAllCardNames();
+    const isolatedResults: IsolatedResult[] = [];
+    
+    // 缓存反向链接结果，提升性能
+    const backlinkCache = new Map<string, string[]>();
+
+    for (const cardName of cardNames) {
+      // 跳过系统片段
+      if (await this.isSystemCard(cardName)) {
+        continue;
+      }
+
+      // 获取反向链接
+      let backlinks: string[];
+      if (backlinkCache.has(cardName)) {
+        backlinks = backlinkCache.get(cardName)!;
+      } else {
+        backlinks = await this.getBacklinks(cardName);
+        backlinkCache.set(cardName, backlinks);
+      }
+
+      isolatedResults.push({
+        cardName,
+        isIsolated: backlinks.length === 0,
+        backlinkCount: backlinks.length
+      });
+    }
+
+    // 筛选孤立片段
+    const isolatedCards = isolatedResults.filter(r => r.isIsolated);
+
+    // 按反向链接数量排序（0个排前面）
+    isolatedCards.sort((a, b) => a.backlinkCount - b.backlinkCount);
+
+    const resultCardNames = isolatedCards
+      .slice(0, maxFileCount)
+      .map(i => i.cardName);
+
+    return {
+      cardNames: resultCardNames,
+      isolatedResults
     };
   }
 
