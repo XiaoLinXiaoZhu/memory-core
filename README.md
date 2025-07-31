@@ -9,7 +9,7 @@
 
 ## ✨ v4.1 新功能
 
-- 🚀 **智能占位符**: setContent 时自动为引用记忆片段创建占位文件
+- 🚀 **智能占位符**: setMemory 时自动为引用记忆片段创建占位文件
 - ⚡ **权重缓存**: 智能缓存权重计算结果，性能提升 60%+
 - 📊 **优化算法**: 全新的权重计算和价值评估算法
 - 🔄 **缓存失效**: 文件变更时自动清除相关缓存
@@ -30,34 +30,34 @@
 ### 1. 获取文件内容
 ```typescript
 // 普通获取
-await manager.getContent(文件名称, 展开深度);
+await manager.getMemory(fragmentName, 展开深度);
 // 获取带行号内容
-await manager.getContent(文件名称, 展开深度, true);
+await manager.getMemory(fragmentName, 展开深度, true);
 ```
 
 ### 2. 创建/编辑文件内容
 ```typescript
-await manager.setContent(文件名称, 内容);
+await manager.setMemory(fragmentName, 内容);
 ```
 
 ### 3. 删除文件内容
 ```typescript
-await manager.deleteContent(文件名称);
+await manager.deleteMemory(fragmentName);
 ```
 
 ### 4. 重命名/合并文件内容
 ```typescript
-await manager.renameContent(旧文件名称, 新文件名称);
+await manager.renameMemory(旧文件名称, 新文件名称);
 ```
 
 ### 5. 获取提示
 ```typescript
-await manager.getHints(文件数量);
+await manager.getMemoryHints(文件数量);
 ```
 
 ### 6. 获取低价值片段建议（推荐）
 ```typescript
-await manager.getLowValueSuggestions(优化参数, 最大文件数量);
+await manager.getOptimizeSuggestions(优化参数, 最大文件数量);
 ```
 
 ### 7. 获取孤立片段建议
@@ -77,7 +77,7 @@ await manager.getSuggestions(优化参数, 最大文件数量);
 
 ```typescript
 // 创建包含引用的记忆片段
-await manager.setContent('学习计划', '今天要学习 [[JavaScript基础]] 和 [[React框架]]');
+await manager.setMemory('学习计划', '今天要学习 [[JavaScript基础]] 和 [[React框架]]');
 
 // 系统自动创建 JavaScript基础.md 和 React框架.md 占位文件
 // 每个占位文件包含基础模板内容
@@ -119,7 +119,7 @@ const manager = new ZettelkastenManager({
 });
 
 // 创建记忆片段
-await manager.setContent('AI基础', `
+await manager.setMemory('AI基础', `
 # AI基础知识
 
 人工智能的核心概念包括：
@@ -129,11 +129,11 @@ await manager.setContent('AI基础', `
 `);
 
 // 获取记忆片段内容（展开引用）
-const content = await manager.getContent('AI基础', 1);
+const content = await manager.getMemory('AI基础', 1);
 
 // 获取智能提示
-const hints = await manager.getHints(5);
-console.log('推荐记忆片段:', hints.cardNames);
+const hints = await manager.getMemoryHints(5);
+console.log('推荐记忆片段:', hints.fragmentNames);
 ```
 
 ## 记忆片段引用语法
@@ -146,11 +146,11 @@ console.log('推荐记忆片段:', hints.cardNames);
 
 ```typescript
 // 创建子目录中的记忆片段
-await manager.setContent('编程/JavaScript', 'JavaScript 相关内容');
-await manager.setContent('编程/前端/React', 'React 框架内容');
+await manager.setMemory('编程/JavaScript', 'JavaScript 相关内容');
+await manager.setMemory('编程/前端/React', 'React 框架内容');
 
 // 引用子目录中的记忆片段
-await manager.setContent('学习计划', `
+await manager.setMemory('学习计划', `
 我的学习计划：
 - [[编程/JavaScript]]
 - [[编程/前端/React]]
@@ -168,7 +168,7 @@ await manager.setContent('学习计划', `
 - 不支持相对路径操作（如 `../` 或 `./`）
 - 目录分隔符使用 `/`（会自动适配操作系统）
 
-### 内容展开
+### 内容展开标记格式
 使用 `![[记忆片段名]]` 来展开引用记忆片段的内容。展开后的格式：
 
 ```markdown
@@ -178,6 +178,21 @@ await manager.setContent('学习计划', `
 
 ![[记忆片段名]]end
 ```
+
+### 新内容展开标记格式（v4.4.0+）
+从 v4.4.0 开始，系统使用新的内容展开标记格式：
+
+```markdown
+<!-- fragment-start:记忆片段名 -->
+记忆片段的实际内容
+<!-- fragment-end:记忆片段名 -->
+```
+
+**优势：**
+- 更清晰的标记结构，避免与内容冲突
+- 支持嵌套展开，不会相互干扰
+- 更好的可读性和维护性
+- 兼容 HTML 注释格式，在各种编辑器中都能正确显示
 
 ## 权重计算算法
 
@@ -254,7 +269,7 @@ await manager.setContent('学习计划', `
 ### 推荐替代方案
 建议使用以下两个专门的方法：
 
-#### 1. getLowValueSuggestions
+#### 1. getOptimizeSuggestions
 专注于识别低价值的记忆片段：
 - 使用信息散度计算，更加精确
 - 专门针对内容密度低的片段
@@ -272,7 +287,7 @@ await manager.setContent('学习计划', `
 const suggestions = await manager.getSuggestions(0.1, 10);
 
 // 新方法（推荐）
-const lowValueSuggestions = await manager.getLowValueSuggestions(0.1, 10);
+const lowValueSuggestions = await manager.getOptimizeSuggestions(0.1, 10);
 const isolatedSuggestions = await manager.getIsolatedSuggestions(10);
 ```
 
@@ -315,16 +330,19 @@ interface ZettelkastenConfig {
 
 #### 方法
 
-- `getContent(cardName: string, expandDepth?: number): Promise<string>`
-- `setContent(cardName: string, content: string): Promise<void>`
-- `deleteContent(cardName: string): Promise<void>`
-- `renameContent(oldName: string, newName: string): Promise<void>`
-- `getHints(count: number): Promise<HintResult>`
-- `getLowValueSuggestions(optimizationParam: number, maxFileCount: number): Promise<LowValueSuggestionResult>`
+- `getMemory(fragmentName: string, expandDepth?: number, showLineNumbers?: boolean): Promise<string>`
+- `setMemory(fragmentName: string, content: string): Promise<void>`
+- `deleteMemory(fragmentName: string): Promise<void>`
+- `renameMemory(oldName: string, newName: string): Promise<void>`
+- `extractMemory(sourceFragmentName: string, targetFragmentName: string, range?: ExtractRange): Promise<void>`
+- `getMemoryHints(count: number): Promise<HintResult>`
+- `getOptimizeSuggestions(optimizationParam: number, maxFileCount: number): Promise<OptimizeSuggestionResult>`
 - `getIsolatedSuggestions(maxFileCount: number): Promise<IsolatedSuggestionResult>`
 - `getSuggestions(threshold: number, maxCount: number): Promise<SuggestionResult>` (已弃用)
 - `getStats(): Promise<Statistics>`
-- `getAllCardNames(): Promise<string[]>`
+- `getAllFragmentNames(): Promise<string[]>`
+- `insertLinkAt(sourceFragmentName: string, targetFragmentName: string, linePosition?: number, anchorText?: string): Promise<void>`
+- `getBacklinks(fragmentName: string): Promise<string[]>`
 - `clearCache(): void`
 
 ## 许可证
@@ -334,8 +352,10 @@ MIT License
 ## 更新日志
 
 ### v4.4.0
-- 🆕 **新方法**: 添加 getLowValueSuggestions 方法，使用信息散度计算低价值片段
+- 🆕 **API重命名**: 所有方法统一使用 fragmentName 参数名，方法名更语义化
+- 🆕 **新方法**: 添加 getOptimizeSuggestions 方法，使用信息散度计算低价值片段
 - 🆕 **新方法**: 添加 getIsolatedSuggestions 方法，识别孤立记忆片段
+- 🆕 **新展开格式**: 引入新的内容展开标记格式 `<!-- fragment-start:名称 -->`
 - 📊 **优化算法**: 引入信息散度概念，优化价值计算方式
 - 🛡️ **系统片段**: 添加系统片段识别和保护机制
 - 🔄 **弃用标记**: 标记 getSuggestions 方法为已弃用，推荐使用新方法
@@ -346,7 +366,7 @@ MIT License
 - 🧪 **测试增强**: 添加了嵌套展开的专门测试用例
 
 ### v4.1.0
-- 🚀 **智能占位符**: setContent 时自动为引用记忆片段创建占位文件
+- 🚀 **智能占位符**: setMemory 时自动为引用记忆片段创建占位文件
 - ⚡ **权重缓存**: 智能缓存权重计算结果，性能提升 60%+
 - 📊 **优化算法**: 全新的权重计算和价值评估算法
 - 🔄 **缓存失效**: 文件变更时自动清除相关缓存

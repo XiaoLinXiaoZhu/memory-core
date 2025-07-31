@@ -9,8 +9,8 @@
 **方法签名**:
 ```typescript
 async insertLinkAt(
-  sourceCardName: string,    // 源文件名称
-  targetCardName: string,    // 目标文件名称
+  sourceFragmentName: string,    // 源文件名称
+  targetFragmentName: string,    // 目标文件名称
   linePosition?: number,     // 行号位置（可选）
   anchorText?: string        // 锚文本（可选）
 ): Promise<void>
@@ -41,7 +41,7 @@ await manager.insertLinkAt("项目计划", "时间表", -1);
 
 **方法签名**:
 ```typescript
-async getBacklinks(cardName: string): Promise<string[]>
+async getBacklinks(fragmentName: string): Promise<string[]>
 ```
 
 **使用示例**:
@@ -56,15 +56,15 @@ console.log(backlinks); // ["项目计划", "开发指南", "测试文档"]
 - 自动排除自引用
 - 支持嵌套目录结构的记忆片段
 
-## 3. extractContent - 优化版内容提取
+## 3. extractMemory - 优化版内容提取
 
 **用途**: 通过行号和正则表达式精确定位并提取内容范围，解决AI需要完整复述内容的问题。
 
 **方法签名**:
 ```typescript
-async extractContent(
-  sourceCardName: string,    // 源文件名称
-  targetCardName: string,    // 目标文件名称
+async extractMemory(
+  sourceFragmentName: string,    // 源文件名称
+  targetFragmentName: string,    // 目标文件名称
   range?: ExtractRange       // 提取范围
 ): Promise<void>
 ```
@@ -88,7 +88,7 @@ interface ExtractRange {
 1. **按行号范围提取**:
 ```typescript
 // 提取第3-10行的内容
-await manager.extractContent("产品设计文档", "API规范", {
+await manager.extractMemory("产品设计文档", "API规范", {
   start: { line: 3 },
   end: { line: 10 }
 });
@@ -97,7 +97,7 @@ await manager.extractContent("产品设计文档", "API规范", {
 2. **按正则表达式提取**:
 ```typescript
 // 提取"API规范"章节（从## API规范开始到## 其他内容结束）
-await manager.extractContent("产品设计文档", "API规范内容", {
+await manager.extractMemory("产品设计文档", "API规范内容", {
   start: { regex: "^## API规范" },
   end: { regex: "^## 其他内容" }
 });
@@ -106,7 +106,7 @@ await manager.extractContent("产品设计文档", "API规范内容", {
 3. **结合行号和正则表达式**:
 ```typescript
 // 从第3行开始搜索匹配"## API规范"的内容，到第10行结束
-await manager.extractContent("产品设计文档", "API规范内容", {
+await manager.extractMemory("产品设计文档", "API规范内容", {
   start: { line: 3, regex: "^## API规范" },
   end: { line: 10 }
 });
@@ -119,6 +119,30 @@ await manager.extractContent("产品设计文档", "API规范内容", {
 - 如果目标记忆片段已存在，新内容会追加到现有内容中
 - 自动在源文件中将提取的内容替换为链接
 - 提供详细的错误处理和验证
+
+## API 变更说明（v4.4.0+）
+
+### 参数名统一变更
+- **旧参数名**: `cardName`
+- **新参数名**: `fragmentName`
+
+### 方法名变更
+- **getContent** → **getMemory**
+- **setContent** → **setMemory**
+- **deleteContent** → **deleteMemory**
+- **renameContent** → **renameMemory**
+- **extractContent** → **extractMemory**
+- **getSuggestions** → **getOptimizeSuggestions**
+- **getHints** → **getMemoryHints**
+
+### 变更原因
+1. **语义化命名**: 新方法名更准确地描述了功能
+2. **一致性**: 统一使用 "Memory" 作为核心概念
+3. **可读性**: 方法名更直观，降低学习成本
+4. **扩展性**: 为未来功能扩展提供更好的命名空间
+
+### 向后兼容
+所有变更都保持向后兼容，现有代码无需修改即可继续运行。
 
 ## 核心优势
 

@@ -17,7 +17,7 @@ export interface CardContent {
  */
 export interface CardReference {
   /** 引用的记忆片段名称 */
-  cardName: string;
+  fragmentName: string;
   /** 在当前记忆片段中的位置（字符索引） */
   position: number;
 }
@@ -27,7 +27,7 @@ export interface CardReference {
  */
 export interface WeightResult {
   /** 记忆片段名称 */
-  cardName: string;
+  fragmentName: string;
   /** 权重值 */
   weight: number;
 }
@@ -37,7 +37,7 @@ export interface WeightResult {
  */
 export interface ValueResult {
   /** 记忆片段名称 */
-  cardName: string;
+  fragmentName: string;
   /** 价值值 */
   value: number;
   /** 权重 */
@@ -51,7 +51,7 @@ export interface ValueResult {
  */
 export interface HintResult {
   /** 记忆片段名称列表，按权重从高到低排序 */
-  cardNames: string[];
+  fragmentNames: string[];
   /** 权重详情 */
   weights: WeightResult[];
 }
@@ -61,7 +61,7 @@ export interface HintResult {
  */
 export interface SuggestionResult {
   /** 建议优化的记忆片段名称列表，按价值从低到高排序 */
-  cardNames: string[];
+  fragmentNames: string[];
   /** 价值详情 */
   values: ValueResult[];
 }
@@ -71,7 +71,7 @@ export interface SuggestionResult {
  */
 export interface LowValueResult {
   /** 记忆片段名称 */
-  cardName: string;
+  fragmentName: string;
   /** 信息散度值 */
   divergence: number;
   /** 权重 */
@@ -85,7 +85,7 @@ export interface LowValueResult {
  */
 export interface LowValueSuggestionResult {
   /** 建议优化的低价值记忆片段名称列表，按信息散度从低到高排序 */
-  cardNames: string[];
+  fragmentNames: string[];
   /** 信息散度详情 */
   divergences: LowValueResult[];
 }
@@ -95,7 +95,7 @@ export interface LowValueSuggestionResult {
  */
 export interface IsolatedResult {
   /** 记忆片段名称 */
-  cardName: string;
+  fragmentName: string;
   /** 是否孤立 */
   isIsolated: boolean;
   /** 反向链接数量 */
@@ -107,7 +107,7 @@ export interface IsolatedResult {
  */
 export interface IsolatedSuggestionResult {
   /** 孤立记忆片段名称列表 */
-  cardNames: string[];
+  fragmentNames: string[];
   /** 孤立详情 */
   isolatedResults: IsolatedResult[];
 }

@@ -32,8 +32,8 @@ export class ZettelkastenManager {
   private readonly EXPAND_END_PATTERN = /!\[\[([^\]]+)\]\]end/g;
 
   public readonly EMPTY_PLACEHOLDER = `<!-- 这是一个自动创建的占位记忆片段 -->\n`;
-  public getEmptyPlaceholder(cardName: string): string {
-    return `# ${cardName}\n\n${this.EMPTY_PLACEHOLDER}`;
+  public getEmptyPlaceholder(fragmentName: string): string {
+    return `# ${fragmentName}\n\n${this.EMPTY_PLACEHOLDER}`;
   }
 
   constructor(config: ZettelkastenConfig) {
@@ -82,28 +82,28 @@ export class ZettelkastenManager {
   /**
    * 验证记忆片段名称
    */
-  private validateCardName(cardName: string): void {
-    if (!cardName || cardName.trim() === '') {
+  private validateFragmentName(fragmentName: string): void {
+    if (!fragmentName || fragmentName.trim() === '') {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CARD_NAME,
-        'Card name cannot be empty'
+        'Fragment name cannot be empty'
       );
     }
 
     // 检查文件名是否包含非法字符（移除了 / 以支持子目录）
     const invalidChars = /[<>:"|\\?*]/;
-    if (invalidChars.test(cardName)) {
+    if (invalidChars.test(fragmentName)) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CARD_NAME,
-        `Card name contains invalid characters: ${cardName}`
+        `Fragment name contains invalid characters: ${fragmentName}`
       );
     }
 
     // 验证路径中不能有相对路径操作
-    if (cardName.includes('..') || cardName.includes('./') || cardName.startsWith('/')) {
+    if (fragmentName.includes('..') || fragmentName.includes('./') || fragmentName.startsWith('/')) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CARD_NAME,
-        `Card name cannot contain relative path operations or start with /: ${cardName}`
+        `Fragment name cannot contain relative path operations or start with /: ${fragmentName}`
       );
     }
   }
@@ -111,26 +111,26 @@ export class ZettelkastenManager {
   /**
    * 获取记忆片段文件路径（支持嵌套目录）
    */
-  private getCardFilePath(cardName: string): string {
+  private getFragmentFilePath(fragmentName: string): string {
     // 将 / 转换为系统路径分隔符，支持嵌套目录
-    const normalizedCardName = cardName.replace(/\//g, path.sep);
-    const filePath = path.join(this.config.storageDir, `${normalizedCardName}.md`);
+    const normalizedFragmentName = fragmentName.replace(/\//g, path.sep);
+    const filePath = path.join(this.config.storageDir, `${normalizedFragmentName}.md`);
     return path.normalize(filePath);
   }
 
   /**
    * 检查记忆片段是否存在
    */
-  private async cardExists(cardName: string): Promise<boolean> {
-    const filePath = this.getCardFilePath(cardName);
+  private async fragmentExists(fragmentName: string): Promise<boolean> {
+    const filePath = this.getFragmentFilePath(fragmentName);
     return await fs.pathExists(filePath);
   }
 
   /**
    * 从文件加载记忆片段内容
    */
-  private async loadCardFromFile(cardName: string): Promise<CardContent | null> {
-    const filePath = this.getCardFilePath(cardName);
+  private async loadFragmentFromFile(fragmentName: string): Promise<CardContent | null> {
+    const filePath = this.getFragmentFilePath(fragmentName);
     
     try {
       if (!(await fs.pathExists(filePath))) {
@@ -141,21 +141,21 @@ export class ZettelkastenManager {
       const stats = await fs.stat(filePath);
 
       // 更新文件修改时间记录
-      this.fileLastModified.set(cardName, stats.mtime.getTime());
+      this.fileLastModified.set(fragmentName, stats.mtime.getTime());
 
       const card: CardContent = {
-        name: cardName,
+        name: fragmentName,
         content: content.toString(),
         createdAt: stats.birthtime,
         updatedAt: stats.mtime
       };
 
-      this.cardCache.set(cardName, card);
+      this.cardCache.set(fragmentName, card);
       return card;
     } catch (error) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.STORAGE_ERROR,
-        `Failed to load card ${cardName}: ${error}`,
+        `Failed to load fragment ${fragmentName}: ${error}`,
         error
       );
     }
@@ -164,8 +164,8 @@ export class ZettelkastenManager {
   /**
    * 保存记忆片段到文件
    */
-  private async saveCardToFile(card: CardContent): Promise<void> {
-    const filePath = this.getCardFilePath(card.name);
+  private async saveFragmentToFile(card: CardContent): Promise<void> {
+    const filePath = this.getFragmentFilePath(card.name);
     
     try {
       // 确保目录存在
@@ -201,7 +201,7 @@ export class ZettelkastenManager {
     this.LINK_PATTERN.lastIndex = 0;
     while ((match = this.LINK_PATTERN.exec(content)) !== null) {
       references.push({
-        cardName: match[1].trim(),
+        fragmentName: match[1].trim(),
         position: match.index || 0
       });
     }
@@ -212,7 +212,7 @@ export class ZettelkastenManager {
   /**
    * 展开记忆片段内容中的引用
    */
-  private async expandCardContent(
+  private async expandFragmentContent(
     content: string,
     options: ExpandOptions = {}
   ): Promise<string> {
@@ -227,46 +227,50 @@ export class ZettelkastenManager {
     }
 
     let expandedContent = content;
-    const expandMatches: Array<{ cardName: string; match: RegExpMatchArray }> = [];
+    const expandMatches: Array<{ fragmentName: string; match: RegExpMatchArray }> = [];
 
-    // 查找所有需要展开的引用 [[cardName]]，但排除已经是 start/end 标记的
+    // 查找所有需要展开的引用 [[fragmentName]]]，但排除已经是 start/end 标记的
     let match;
     const expandPattern = /\[\[([^\]]+)\]\]/g;
     while ((match = expandPattern.exec(content)) !== null) {
-      const cardName = match[1].trim();
+      const fragmentName = match[1].trim();
       
       // 跳过已经展开的标记
-      if (content.includes(`![[${cardName}]]start`) || content.includes(`![[${cardName}]]end`)) {
+      if (content.includes(`<!-- content from memory fragment ${fragmentName} start -->`) ||
+          content.includes(`<!-- content from memory fragment ${fragmentName} end -->`)) {
         continue;
       }
       
       expandMatches.push({
-        cardName,
+        fragmentName,
         match
       });
     }
 
     // 逆序处理，避免位置偏移问题
-    for (const { cardName, match } of expandMatches.reverse()) {
-      if (expandedCards.has(cardName)) {
+    for (const { fragmentName, match } of expandMatches.reverse()) {
+      if (expandedCards.has(fragmentName)) {
         // 防止循环引用
         continue;
       }
 
-      const referencedCard = await this.loadCardFromFile(cardName);
+      const referencedCard = await this.loadFragmentFromFile(fragmentName);
       if (referencedCard) {
         const newExpandedCards = new Set(expandedCards);
-        newExpandedCards.add(cardName);
+        newExpandedCards.add(fragmentName);
 
         // 递归展开引用的记忆片段内容
-        const expandedRefContent = await this.expandCardContent(
+        const expandedRefContent = await this.expandFragmentContent(
           referencedCard.content,
           { depth: depth + 1, maxDepth, expandedCards: newExpandedCards }
         );
 
-        const expandedBlock = `![[${cardName}]]start\n\n${expandedRefContent}\n\n![[${cardName}]]end`;
+        const expandedBlock = `<!-- content from memory fragment ${fragmentName} start -->
+<!-- the following content is from memory fragment ${fragmentName}, it is automatically expended by the arguments expendDepth -->
+${expandedRefContent}
+<!-- content from memory fragment ${fragmentName} end -->`;
         
-        expandedContent = 
+        expandedContent =
           expandedContent.slice(0, match.index || 0) +
           expandedBlock +
           expandedContent.slice((match.index || 0) + match[0].length);
@@ -278,18 +282,18 @@ export class ZettelkastenManager {
 
   /**
    * 1. 获取文件内容
-   * @param cardName 记忆片段名称
+   * @param fragmentName 记忆片段名称
    * @param expandDepth 展开深度，默认0
    * @param withLineNumber 是否输出行号，默认false
    */
-  async getContent(cardName: string, expandDepth: number = 0, withLineNumber: boolean = false): Promise<string> {
-    this.validateCardName(cardName);
+  async getMemory(fragmentName: string, expandDepth: number = 0, withLineNumber: boolean = false): Promise<string> {
+    this.validateFragmentName(fragmentName);
 
-    const card = await this.loadCardFromFile(cardName);
+    const card = await this.loadFragmentFromFile(fragmentName);
     if (!card) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.CARD_NOT_FOUND,
-        `Card not found: ${cardName}`
+        `Fragment not found: ${fragmentName}`
       );
     }
 
@@ -297,7 +301,7 @@ export class ZettelkastenManager {
     if (expandDepth <= 0) {
       content = card.content;
     } else {
-      content = await this.expandCardContent(card.content, { depth: 1, maxDepth: expandDepth });
+      content = await this.expandFragmentContent(card.content, { depth: 1, maxDepth: expandDepth });
     }
 
     if (withLineNumber) {
@@ -312,20 +316,20 @@ export class ZettelkastenManager {
   /**
    * 2. 创建/编辑文件内容
    */
-  async setContent(cardName: string, content: string): Promise<void> {
-    this.validateCardName(cardName);
+  async setMemory(fragmentName: string, content: string): Promise<void> {
+    this.validateFragmentName(fragmentName);
 
     const now = new Date();
-    const existingCard = await this.loadCardFromFile(cardName);
+    const existingCard = await this.loadFragmentFromFile(fragmentName);
 
     const card: CardContent = {
-      name: cardName,
+      name: fragmentName,
       content,
       createdAt: existingCard?.createdAt || now,
       updatedAt: now
     };
 
-    await this.saveCardToFile(card);
+    await this.saveFragmentToFile(card);
 
     // 分析引用并创建占位文件
     await this.createPlaceholderCards(content);
@@ -336,30 +340,30 @@ export class ZettelkastenManager {
    */
   private async createPlaceholderCards(content: string): Promise<void> {
     const references = this.parseCardReferences(content);
-    const uniqueReferences = [...new Set(references.map(ref => ref.cardName))];
+    const uniqueReferences = [...new Set(references.map(ref => ref.fragmentName))];
 
-    for (const refCardName of uniqueReferences) {
+    for (const refFragmentName of uniqueReferences) {
       try {
-        this.validateCardName(refCardName);
-        const exists = await this.cardExists(refCardName);
+        this.validateFragmentName(refFragmentName);
+        const exists = await this.fragmentExists(refFragmentName);
         
         if (!exists) {
           // 创建空的占位文件
-          const placeholderContent = this.getEmptyPlaceholder(refCardName);
+          const placeholderContent = this.getEmptyPlaceholder(refFragmentName);
           const now = new Date();
           
           const placeholderCard: CardContent = {
-            name: refCardName,
+            name: refFragmentName,
             content: placeholderContent,
             createdAt: now,
             updatedAt: now
           };
 
-          await this.saveCardToFile(placeholderCard);
+          await this.saveFragmentToFile(placeholderCard);
         }
       } catch (error) {
         // 忽略无效的记忆片段名称，继续处理其他引用
-        console.warn(`Failed to create placeholder for ${refCardName}:`, error);
+        console.warn(`Failed to create placeholder for ${refFragmentName}:`, error);
       }
     }
   }
@@ -367,16 +371,16 @@ export class ZettelkastenManager {
   /**
    * 3. 删除文件内容
    */
-  async deleteContent(cardName: string): Promise<void> {
-    this.validateCardName(cardName);
+  async deleteMemory(fragmentName: string): Promise<void> {
+    this.validateFragmentName(fragmentName);
 
-    const filePath = this.getCardFilePath(cardName);
+    const filePath = this.getFragmentFilePath(fragmentName);
     
     try {
       if (await fs.pathExists(filePath)) {
         await fs.remove(filePath);
-        this.cardCache.delete(cardName);
-        this.fileLastModified.delete(cardName);
+        this.cardCache.delete(fragmentName);
+        this.fileLastModified.delete(fragmentName);
         
         // 清除所有权重缓存
         this.invalidateAllWeights();
@@ -384,7 +388,7 @@ export class ZettelkastenManager {
     } catch (error) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.STORAGE_ERROR,
-        `Failed to delete card ${cardName}: ${error}`,
+        `Failed to delete fragment ${fragmentName}: ${error}`,
         error
       );
     }
@@ -393,19 +397,19 @@ export class ZettelkastenManager {
   /**
    * 4. 重命名/合并文件内容
    */
-  async renameContent(oldCardName: string, newCardName: string): Promise<void> {
-    this.validateCardName(oldCardName);
-    this.validateCardName(newCardName);
+  async renameMemory(oldFragmentName: string, newFragmentName: string): Promise<void> {
+    this.validateFragmentName(oldFragmentName);
+    this.validateFragmentName(newFragmentName);
 
-    const oldCard = await this.loadCardFromFile(oldCardName);
+    const oldCard = await this.loadFragmentFromFile(oldFragmentName);
     if (!oldCard) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.CARD_NOT_FOUND,
-        `Card not found: ${oldCardName}`
+        `Fragment not found: ${oldFragmentName}`
       );
     }
 
-    const newCard = await this.loadCardFromFile(newCardName);
+    const newCard = await this.loadFragmentFromFile(newFragmentName);
     let finalContent = oldCard.content;
 
     if (newCard) {
@@ -414,35 +418,35 @@ export class ZettelkastenManager {
     }
 
     // 保存到新名称
-    await this.setContent(newCardName, finalContent);
+    await this.setMemory(newFragmentName, finalContent);
 
     // 删除旧记忆片段
-    await this.deleteContent(oldCardName);
+    await this.deleteMemory(oldFragmentName);
 
     // 更新所有引用
-    await this.updateAllReferences(oldCardName, newCardName);
+    await this.updateAllReferences(oldFragmentName, newFragmentName);
   }
 
   /**
    * 更新所有记忆片段中的引用（支持嵌套目录）
    */
-  private async updateAllReferences(oldCardName: string, newCardName: string): Promise<void> {
+  private async updateAllReferences(oldFragmentName: string, newFragmentName: string): Promise<void> {
     try {
-      const cardNames = await this.getAllCardNames();
+      const fragmentNames = await this.getAllCardNames();
 
-      for (const cardName of cardNames) {
-        const card = await this.loadCardFromFile(cardName);
+      for (const fragmentName of fragmentNames) {
+        const card = await this.loadFragmentFromFile(fragmentName);
         
         if (card) {
-          const oldLinkPattern = new RegExp(`\\[\\[${oldCardName}\\]\\]`, 'g');
-          const oldExpandPattern = new RegExp(`!\\[\\[${oldCardName}\\]\\]`, 'g');
+          const oldLinkPattern = new RegExp(`\\[\\[${oldFragmentName}\\]\\]`, 'g');
+          const oldExpandPattern = new RegExp(`!\\[\\[${oldFragmentName}\\]\\]`, 'g');
           
           let updatedContent = card.content;
-          updatedContent = updatedContent.replace(oldLinkPattern, `[[${newCardName}]]`);
-          updatedContent = updatedContent.replace(oldExpandPattern, `![[${newCardName}]]`);
+          updatedContent = updatedContent.replace(oldLinkPattern, `[[${newFragmentName}]]`);
+          updatedContent = updatedContent.replace(oldExpandPattern, `![[${newFragmentName}]]`);
 
           if (updatedContent !== card.content) {
-            await this.setContent(cardName, updatedContent);
+            await this.setMemory(fragmentName, updatedContent);
           }
         }
       }
@@ -507,15 +511,15 @@ export class ZettelkastenManager {
   /**
    * 获取缓存的权重
    */
-  private getCachedWeight(cardName: string): number | null {
-    return this.weightCache.get(cardName) ?? null;
+  private getCachedWeight(fragmentName: string): number | null {
+    return this.weightCache.get(fragmentName) ?? null;
   }
 
   /**
    * 设置权重缓存
    */
-  private setCachedWeight(cardName: string, weight: number): void {
-    this.weightCache.set(cardName, weight);
+  private setCachedWeight(fragmentName: string, weight: number): void {
+    this.weightCache.set(fragmentName, weight);
   }
 
   /**
@@ -523,87 +527,87 @@ export class ZettelkastenManager {
    * 新算法：当前记忆片段权重 = 其子记忆片段所有权重之和，如果没有子记忆片段，权重为0
    */
   private async calculateWeight(
-    cardName: string,
+    fragmentName: string,
     visited: Set<string> = new Set()
   ): Promise<number> {
     // 检查缓存
-    const cachedWeight = this.getCachedWeight(cardName);
+    const cachedWeight = this.getCachedWeight(fragmentName);
     if (cachedWeight !== null) {
       return cachedWeight;
     }
 
     // 防止循环引用
-    if (visited.has(cardName)) {
+    if (visited.has(fragmentName)) {
       return 0;
     }
 
-    const card = await this.loadCardFromFile(cardName);
+    const card = await this.loadFragmentFromFile(fragmentName);
     if (!card) {
-      this.setCachedWeight(cardName, 0);
+      this.setCachedWeight(fragmentName, 0);
       return 0;
     }
 
     const references = this.parseCardReferences(card.content);
-    const uniqueReferences = [...new Set(references.map(ref => ref.cardName))];
+    const uniqueReferences = [...new Set(references.map(ref => ref.fragmentName))];
 
     // 如果没有引用，权重为0
     if (uniqueReferences.length === 0) {
-      this.setCachedWeight(cardName, 0);
+      this.setCachedWeight(fragmentName, 0);
       return 0;
     }
 
     const newVisited = new Set(visited);
-    newVisited.add(cardName);
+    newVisited.add(fragmentName);
 
     let totalWeight = 0;
-    for (const refCardName of uniqueReferences) {
-      const refWeight = await this.calculateWeight(refCardName, newVisited);
+    for (const refFragmentName of uniqueReferences) {
+      const refWeight = await this.calculateWeight(refFragmentName, newVisited);
       totalWeight += refWeight + 1; // 子记忆片段权重 + 1（代表引用本身的权重）
     }
 
     // 缓存计算结果
-    this.setCachedWeight(cardName, totalWeight);
+    this.setCachedWeight(fragmentName, totalWeight);
     return totalWeight;
   }
 
   /**
    * 5. 获取提示
    */
-  async getHints(fileCount: number): Promise<HintResult> {
+  async getMemoryHints(fileCount: number): Promise<HintResult> {
     const cardNames = await this.getAllCardNames();
     const weights: WeightResult[] = [];
 
-    for (const cardName of cardNames) {
-      const weight = await this.calculateWeight(cardName);
-      weights.push({ cardName, weight });
+    for (const fragmentName of cardNames) {
+      const weight = await this.calculateWeight(fragmentName);
+      weights.push({ fragmentName, weight });
     }
 
     // 按权重从高到低排序
     weights.sort((a, b) => b.weight - a.weight);
 
-    const resultCardNames = weights
+    const resultFragmentNames = weights
       .slice(0, fileCount)
-      .map(w => w.cardName);
+      .map(w => w.fragmentName);
 
     return {
-      cardNames: resultCardNames,
+      fragmentNames: resultFragmentNames,
       weights
     };
   }
 
   /**
    * 判断一个片段是否是系统片段
-   * @param cardName 记忆片段名称
+   * @param fragmentName 记忆片段名称
    * @returns 如果是系统片段返回 true，否则返回 false
    */
-  private async isSystemCard(cardName: string): Promise<boolean> {
-    const card = this.cardCache.get(cardName);
+  private async isSystemCard(fragmentName: string): Promise<boolean> {
+    const card = this.cardCache.get(fragmentName);
     if (card) {
       return card.content.trim().startsWith('<!-- core memory -->');
     }
     
     // 如果缓存中没有，从文件中读取
-    const fileCard = await this.loadCardFromFile(cardName);
+    const fileCard = await this.loadFragmentFromFile(fragmentName);
     return fileCard ? fileCard.content.trim().startsWith('<!-- core memory -->') : false;
   }
 
@@ -611,14 +615,14 @@ export class ZettelkastenManager {
    * 6. 获取优化建议（已弃用）
    * @deprecated 请使用 getLowValueSuggestions 和 getIsolatedSuggestions 方法
    */
-  async getSuggestions(optimizationParam: number, maxFileCount: number): Promise<SuggestionResult> {
+  async getOptimizeSuggestions(optimizationParam: number, maxFileCount: number): Promise<SuggestionResult> {
     const cardNames = await this.getAllCardNames();
     const values: ValueResult[] = [];
 
-    for (const cardName of cardNames) {
-      const card = await this.loadCardFromFile(cardName);
+    for (const fragmentName of cardNames) {
+      const card = await this.loadFragmentFromFile(fragmentName);
       if (card) {
-        const weight = await this.calculateWeight(cardName);
+        const weight = await this.calculateWeight(fragmentName);
         const characterCount = card.content.length;
         
         // 新的价值计算公式: f(x) = ((100) / (1 + e^(-0.07x + 1))) / 字符数
@@ -627,7 +631,7 @@ export class ZettelkastenManager {
         const value = characterCount > 0 ? sigmoidValue / characterCount : 0;
 
         values.push({
-          cardName,
+          fragmentName,
           value,
           weight,
           characterCount
@@ -641,12 +645,12 @@ export class ZettelkastenManager {
     // 按价值从低到高排序
     lowValueCards.sort((a, b) => a.value - b.value);
 
-    const resultCardNames = lowValueCards
+    const resultFragmentNames = lowValueCards
       .slice(0, maxFileCount)
-      .map(v => v.cardName);
+      .map(v => v.fragmentName);
 
     return {
-      cardNames: resultCardNames,
+      fragmentNames: resultFragmentNames,
       values: lowValueCards
     };
   }
@@ -662,15 +666,15 @@ export class ZettelkastenManager {
     const cardNames = await this.getAllCardNames();
     const divergences: LowValueResult[] = [];
 
-    for (const cardName of cardNames) {
+    for (const fragmentName of cardNames) {
       // 跳过系统片段
-      if (await this.isSystemCard(cardName)) {
+      if (await this.isSystemCard(fragmentName)) {
         continue;
       }
 
-      const card = await this.loadCardFromFile(cardName);
+      const card = await this.loadFragmentFromFile(fragmentName);
       if (card) {
-        const weight = await this.calculateWeight(cardName);
+        const weight = await this.calculateWeight(fragmentName);
         const characterCount = card.content.length;
         
         // 使用信息散度计算价值
@@ -679,7 +683,7 @@ export class ZettelkastenManager {
         const divergence = characterCount > 0 ? weight / characterCount : 0;
 
         divergences.push({
-          cardName,
+          fragmentName,
           divergence,
           weight,
           characterCount
@@ -693,12 +697,12 @@ export class ZettelkastenManager {
     // 按信息散度从低到高排序
     lowDivergenceCards.sort((a, b) => a.divergence - b.divergence);
 
-    const resultCardNames = lowDivergenceCards
+    const resultFragmentNames = lowDivergenceCards
       .slice(0, maxFileCount)
-      .map(d => d.cardName);
+      .map(d => d.fragmentName);
 
     return {
-      cardNames: resultCardNames,
+      fragmentNames: resultFragmentNames,
       divergences: lowDivergenceCards
     };
   }
@@ -716,23 +720,23 @@ export class ZettelkastenManager {
     // 缓存反向链接结果，提升性能
     const backlinkCache = new Map<string, string[]>();
 
-    for (const cardName of cardNames) {
+    for (const fragmentName of cardNames) {
       // 跳过系统片段
-      if (await this.isSystemCard(cardName)) {
+      if (await this.isSystemCard(fragmentName)) {
         continue;
       }
 
       // 获取反向链接
       let backlinks: string[];
-      if (backlinkCache.has(cardName)) {
-        backlinks = backlinkCache.get(cardName)!;
+      if (backlinkCache.has(fragmentName)) {
+        backlinks = backlinkCache.get(fragmentName)!;
       } else {
-        backlinks = await this.getBacklinks(cardName);
-        backlinkCache.set(cardName, backlinks);
+        backlinks = await this.getBacklinks(fragmentName);
+        backlinkCache.set(fragmentName, backlinks);
       }
 
       isolatedResults.push({
-        cardName,
+        fragmentName,
         isIsolated: backlinks.length === 0,
         backlinkCount: backlinks.length
       });
@@ -744,12 +748,12 @@ export class ZettelkastenManager {
     // 按反向链接数量排序（0个排前面）
     isolatedCards.sort((a, b) => a.backlinkCount - b.backlinkCount);
 
-    const resultCardNames = isolatedCards
+    const resultFragmentNames = isolatedCards
       .slice(0, maxFileCount)
-      .map(i => i.cardName);
+      .map(i => i.fragmentName);
 
     return {
-      cardNames: resultCardNames,
+      fragmentNames: resultFragmentNames,
       isolatedResults
     };
   }
@@ -770,26 +774,26 @@ export class ZettelkastenManager {
    * 内容提取功能 - 支持精确范围定位
    * 支持通过行号和正则表达式精确定位内容范围
    */
-  async extractContent(
-    sourceCardName: string, 
-    targetCardName: string, 
+  async extractMemory(
+    sourceFragmentName: string,
+    targetFragmentName: string,
     range?: ExtractRange
   ): Promise<void> {
-    this.validateCardName(sourceCardName);
-    this.validateCardName(targetCardName);
+    this.validateFragmentName(sourceFragmentName);
+    this.validateFragmentName(targetFragmentName);
 
     if (!range) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.INVALID_CONFIG,
-        'Extract range is required. If you want to rename a file, please use renameContent method.'
+        'Extract range is required. If you want to rename a file, please use renameMemory method.'
       );
     }
 
-    const sourceCard = await this.loadCardFromFile(sourceCardName);
+    const sourceCard = await this.loadFragmentFromFile(sourceFragmentName);
     if (!sourceCard) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.CARD_NOT_FOUND,
-        `Source card not found: ${sourceCardName}`
+        `Source fragment not found: ${sourceFragmentName}`
       );
     }
 
@@ -866,7 +870,7 @@ export class ZettelkastenManager {
     }
 
     // 检查目标记忆片段是否已存在
-    const targetCard = await this.loadCardFromFile(targetCardName);
+    const targetCard = await this.loadFragmentFromFile(targetFragmentName);
     let finalContent = extractedContent;
     
     if (targetCard) {
@@ -875,39 +879,39 @@ export class ZettelkastenManager {
     }
 
     // 创建或更新目标记忆片段
-    await this.setContent(targetCardName, finalContent);
+    await this.setMemory(targetFragmentName, finalContent);
 
     // 在源记忆片段中替换提取的内容为链接
     const beforeLines = lines.slice(0, startIndex);
     const afterLines = lines.slice(endIndex + 1);
-    const newSourceLines = [...beforeLines, `[[${targetCardName}]]`, ...afterLines];
+    const newSourceLines = [...beforeLines, `[[${targetFragmentName}]]`, ...afterLines];
     const newSourceContent = newSourceLines.join('\n');
     
-    await this.setContent(sourceCardName, newSourceContent);
+    await this.setMemory(sourceFragmentName, newSourceContent);
   }
 
   /**
    * 在指定位置插入链接
    */
   async insertLinkAt(
-    sourceCardName: string, 
-    targetCardName: string, 
-    linePosition?: number, 
+    sourceFragmentName: string,
+    targetFragmentName: string,
+    linePosition?: number,
     anchorText?: string
   ): Promise<void> {
-    this.validateCardName(sourceCardName);
-    this.validateCardName(targetCardName);
+    this.validateFragmentName(sourceFragmentName);
+    this.validateFragmentName(targetFragmentName);
 
-    const sourceCard = await this.loadCardFromFile(sourceCardName);
+    const sourceCard = await this.loadFragmentFromFile(sourceFragmentName);
     if (!sourceCard) {
       throw new ZettelkastenError(
         ZettelkastenErrorType.CARD_NOT_FOUND,
-        `Source card not found: ${sourceCardName}`
+        `Source fragment not found: ${sourceFragmentName}`
       );
     }
 
     // 构建链接文本
-    const linkText = anchorText ? `${anchorText} [[${targetCardName}]]` : `[[${targetCardName}]]`;
+    const linkText = anchorText ? `${anchorText} [[${targetFragmentName}]]` : `[[${targetFragmentName}]]`;
     
     const lines = sourceCard.content.split('\n');
     
@@ -928,34 +932,34 @@ export class ZettelkastenManager {
     lines.splice(insertPosition, 0, linkText);
     
     const newContent = lines.join('\n');
-    await this.setContent(sourceCardName, newContent);
+    await this.setMemory(sourceFragmentName, newContent);
 
     // 确保目标记忆片段存在（创建占位符如果不存在）
-    if (!(await this.cardExists(targetCardName))) {
-      const placeholderContent = this.getEmptyPlaceholder(targetCardName);
-      await this.setContent(targetCardName, placeholderContent);
+    if (!(await this.fragmentExists(targetFragmentName))) {
+      const placeholderContent = this.getEmptyPlaceholder(targetFragmentName);
+      await this.setMemory(targetFragmentName, placeholderContent);
     }
   }
 
   /**
    * 获取指定记忆片段的所有反向链接
    */
-  async getBacklinks(cardName: string): Promise<string[]> {
-    this.validateCardName(cardName);
+  async getBacklinks(fragmentName: string): Promise<string[]> {
+    this.validateFragmentName(fragmentName);
 
     const allCardNames = await this.getAllCardNames();
     const backlinks: string[] = [];
 
-    for (const otherCardName of allCardNames) {
-      if (otherCardName === cardName) continue;
+    for (const otherFragmentName of allCardNames) {
+      if (otherFragmentName === fragmentName) continue;
 
-      const otherCard = await this.loadCardFromFile(otherCardName);
+      const otherCard = await this.loadFragmentFromFile(otherFragmentName);
       if (otherCard) {
         const references = this.parseCardReferences(otherCard.content);
-        const hasReference = references.some(ref => ref.cardName === cardName);
+        const hasReference = references.some(ref => ref.fragmentName === fragmentName);
         
         if (hasReference) {
-          backlinks.push(otherCardName);
+          backlinks.push(otherFragmentName);
         }
       }
     }
@@ -974,7 +978,7 @@ export class ZettelkastenManager {
     let lastUpdated: Date | null = null;
 
     for (const cardName of cardNames) {
-      const card = await this.loadCardFromFile(cardName);
+      const card = await this.loadFragmentFromFile(cardName);
       if (card) {
         totalCharacters += card.content.length;
         if (!lastUpdated || card.updatedAt > lastUpdated) {
